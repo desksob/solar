@@ -58,6 +58,12 @@ public final class Debug {
         if ("stems".equals(name)) return new MixScreens.StemList();
         if ("search".equals(name)) return new MusicScreens.SearchResults("love");
         if ("recent".equals(name)) return new MusicScreens.TrackList("Recently added", 0);
+        if ("getmusic".equals(name)) return new GetMusicScreens.Menu();
+        if ("downloads".equals(name)) return new GetMusicScreens.DownloadList();
+        if ("servers".equals(name)) return new GetMusicScreens.ServerList();
+        if ("serveradd".equals(name)) return new GetMusicScreens.ServerAdd();
+        if ("slsk".equals(name)) return new GetMusicScreens.SlskSignIn();
+        if ("ytresults".equals(name)) return new GetMusicScreens.YtResults("july radio");
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

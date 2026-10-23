@@ -32,7 +32,8 @@ public final class Spoken {
         public long[] partMs;        // durations when known (books)
         public String cover;         // file path or URL
         public boolean book;
-        public boolean live;         // internet radio: no resume, no seeking
+        public boolean live;
+        public String label;         // section title on the player ("Server"); default by kind         // internet radio: no resume, no seeking
         public String info = "";     // live: "128 kbps · Jazz"
 
         public Item(String key, String title, String sub) {

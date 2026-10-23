@@ -76,6 +76,24 @@ public final class Downloads {
         if (!working) next();
     }
 
+    /** A transfer run by someone else (Soulseek): listed here, progress set with {@link #progress}. */
+    public static synchronized Job external(String title, File target) {
+        Job j = new Job("", target, title, null);
+        j.running = true;
+        jobs.add(j);
+        notifyAll_();
+        return j;
+    }
+
+    public static void progress(Job j, long done, long total, boolean finished, boolean failed) {
+        j.done = done;
+        j.total = total;
+        j.finished = finished;
+        j.failed = failed;
+        if (finished || failed) j.running = false;
+        notifyAll_();
+    }
+
     /** Drop finished and failed jobs from the list. */
     public static synchronized void clearDone() {
         for (int i = jobs.size() - 1; i >= 0; i--) if (jobs.get(i).finished || jobs.get(i).failed) jobs.remove(i);

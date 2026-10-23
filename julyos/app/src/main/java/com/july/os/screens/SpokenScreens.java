@@ -414,6 +414,8 @@ public final class SpokenScreens {
 
         @Override
         public String title() {
+            Spoken.Item it = Spoken.get().item();
+            if (it != null && it.label != null) return it.label;
             return live() ? "Internet Radio" : book() ? "Audiobook" : "Podcast";
         }
 

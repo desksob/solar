@@ -254,6 +254,12 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         redraw();
     }
 
+    /** Close whatever pop-up is showing (loading boxes). */
+    public void dismissPopup() {
+        popup = null;
+        redraw();
+    }
+
     public void toast(int icon, String text) {
         show(new Popup.Toast(icon, text));
     }
