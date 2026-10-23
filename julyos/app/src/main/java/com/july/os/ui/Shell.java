@@ -59,6 +59,29 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     private static final long INTRO_MS = 1100L, BOOT_MIN_MS = 1400L;
 
     private boolean longHandled;
+    /** B1b: locked after the screen goes off while something plays; hold Center to unlock. */
+    private boolean locked;
+
+    private final BroadcastReceiver screen = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent i) {
+            if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) {
+                boolean playing = com.july.os.radio.JulyPlayer.isActive() || JulyApp.get().player().isPlaying();
+                if (playing) {
+                    locked = true;
+                    popup = null;
+                }
+            }
+            redraw();
+        }
+    };
+
+    private final com.july.os.radio.JulyImages.Callback lockArt = new com.july.os.radio.JulyImages.Callback() {
+        @Override
+        public void onJulyImage(String url, Bitmap bmp) {
+            redraw();
+        }
+    };
     /** Debug: launch with --ez debugKeys true to print incoming key events on screen. */
     private boolean debugKeys;
     private String keyLog = "";
@@ -97,6 +120,9 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         push(new HomeScreen());
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
+        IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        sf.addAction(Intent.ACTION_SCREEN_ON);
+        registerReceiver(screen, sf);
     }
 
     @Override
@@ -108,6 +134,12 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
 
     /** Test hook: am start ... --es open songs|albums|artists|music|schedule|live|favs|radio|np|queue|settings. */
     private void openFromIntent(Intent i) {
+        if (i != null && i.getBooleanExtra("lock", false)) {
+            locked = true;
+            booting = false;
+            redraw();
+            return;
+        }
         String what = i != null ? i.getStringExtra("open") : null;
         if (what == null) {
             // Home button while July is already running (direct, or forwarded by Solar's home
@@ -119,6 +151,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             return;
         }
         booting = false;
+        locked = false; // test hook opens screens unlocked
         home();
         Screen s = com.july.os.screens.Debug.screenFor(what);
         if (s != null) push(s);
@@ -146,6 +179,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         super.onDestroy();
         JulyApp.get().player().removeListener(this);
         JulyApp.get().library().removeListener(this);
+        try { unregisterReceiver(screen); } catch (Exception ignored) { }
     }
 
     @Override
@@ -260,6 +294,13 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             return;
         }
         booting = false;
+        if (locked) {
+            draw.setDark(true);
+            com.july.os.screens.LockScreen.draw(c, draw, status, lockArt);
+            c.restore();
+            view.postInvalidateDelayed(1000);
+            return;
+        }
         Screen sc = top();
         if (sc == null) {
             c.restore();
@@ -462,6 +503,18 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     }
 
     private void dispatch(Screen.Key k) {
+        if (locked) {
+            if (k == Screen.Key.CENTER_LONG) locked = false;
+            else if (k == Screen.Key.PLAY) {
+                if (com.july.os.radio.JulyPlayer.isActive() || !JulyApp.get().player().hasQueue()) {
+                    com.july.os.screens.RadioScreens.togglePlay(this);
+                } else {
+                    JulyApp.get().player().toggle();
+                }
+            }
+            redraw();
+            return;
+        }
         if (popup != null && popup.modal()) {
             if (!popup.onKey(k)) popup = null;
             redraw();

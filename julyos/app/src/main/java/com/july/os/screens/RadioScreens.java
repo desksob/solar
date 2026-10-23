@@ -150,7 +150,7 @@ public final class RadioScreens {
         @Override
         public String title() {
             if (JulyPlayer.state() == JulyPlayer.ERROR) return "July Radio";
-            return dj() ? "July Radio · DJ set" : "July Radio · Live";
+            return dj() ? "July Radio · DJ set" : "July Radio · Now Playing";
         }
 
         @Override
@@ -224,50 +224,8 @@ public final class RadioScreens {
             int st = JulyPlayer.state();
             if (st == JulyPlayer.ERROR) { drawError(c, d, top, bottom); return; }
             if (dj()) { drawDj(c, d, top, bottom); return; }
-            float x = Frame.PAD_X, y = top + Frame.PAD_T, size = 214f;
-            d.fill(c, x, y, x + size, y + size, d.hair);
-            // B1: the art box is the song's own cover only — never the show image (that belongs
-            // to the ON AIR column). No cover yet → a quiet placeholder.
-            Bitmap b = now != null && now.art.length() > 0 ? JulyImages.get(now.art, this) : null;
-            if (b != null) d.image(c, b, x, y, x + size, y + size);
-            else d.icon(c, Icons.MUSIC, x + size / 2f - 20f, y + (size - 44f) / 2f - 20f, 40f, d.muted, 1.6f);
-            d.box(c, x, y, x + size, y + size, d.ink);
-            String title = now != null ? now.headline() : JulyRadio.STATION_NAME;
-            String sub = now != null ? now.subline() : (st == JulyPlayer.CONNECTING ? "Connecting..." : "24/7 · Nairobi");
-            float capH = 44f;
-            d.fill(c, x + 1f, y + size - 1f - capH, x + size - 1f, y + size - 1f, 0xFF0A0A0A);
-            d.text(c, d.fit(Draw.up(title), size - 22f, d.semi, 13f, 0f), x + 11f, y + size - capH + 16f, d.semi, 13f, 0xFFF5F5F5, 0f);
-            if (sub.length() > 0) {
-                float tr = Draw.em(10f, 0.04f);
-                d.text(c, d.fit(Draw.up(sub), size - 22f, d.med, 10f, tr), x + 11f, y + size - capH + 31f, d.med, 10f, 0xFFADAAAD, tr);
-            }
-            if (st == JulyPlayer.CONNECTING) d.tag(c, "Connecting", x + 8f, y + 8f);
-            else if (st != JulyPlayer.PLAYING) d.tag(c, "Paused", x + 8f, y + 8f);
-
-            float tx = x + size + 14f, tw = Draw.W - Frame.PAD_X - tx, ty = y;
-            JulyRadio.Show sh = now != null ? now.show : null;
-            String pl = Draw.up(sh != null ? "On air" : "Live");
-            float ptr = Draw.em(11f, 0.06f);
-            float pw = d.width(pl, d.semi, 11f, ptr) + 20f;
-            d.fill(c, tx, ty, tx + pw, ty + 19f, d.ink);
-            d.text(c, pl, tx + 10f, Draw.mid(ty, 19f, 11f), d.semi, 11f, d.bg, ptr);
-            ty += 19f + 10f;
-            if (sh != null) {
-                for (String ln : d.wrap(Draw.up(sh.name), tw, d.semi, 15f, 0f, 3)) {
-                    d.text(c, ln, tx, ty + 13f, d.semi, 15f, d.ink, 0f);
-                    ty += 18f;
-                }
-                String meta = (sh.host.length() > 0 ? "with " + sh.host + " · " : "") + sh.localTimes();
-                float tr = Draw.em(10f, 0.06f);
-                for (String ln : d.wrap(Draw.up(meta), tw, d.med, 10f, tr, 2)) {
-                    d.text(c, ln, tx, ty + 12f, d.med, 10f, d.muted, tr);
-                    ty += 13f;
-                }
-            }
-            if (saved()) {
-                d.icon(c, Icons.HEART, tx, ty + 12f, 14f, d.ink);
-                d.text(c, "SAVED", tx + 22f, ty + 23f, d.med, 10f, d.ink, Draw.em(10f, 0.08f));
-            }
+            // B1: one bordered card filling the body (padding 10/16/10).
+            card(c, d, Frame.PAD_X, top + 10f, Draw.W - Frame.PAD_X, bottom - Frame.PAD_B, now, saved(), this);
         }
 
         private void drawDj(Canvas c, Draw d, float top, float bottom) {
@@ -289,6 +247,53 @@ public final class RadioScreens {
             d.centered(c, "STREAM LOST", cx, cy + 20f + 28f, d.semi, 16f, d.ink, 0f);
             d.centered(c, "CHECK WI-FI, THEN PRESS CENTER TO RETRY", cx, cy + 20f + 46f, d.med, 10f, d.muted, Draw.em(10f, 0.06f));
         }
+    }
+
+    /**
+     * B1 / B1b card: the song's cover across the card (never the show image), a LIVE tag top-left,
+     * the show name in an outlined tag top-right, and a black caption with title, artist and heart.
+     */
+    static void card(Canvas c, Draw d, float l, float t, float r, float b, JulyRadio.Now now,
+                     boolean saved, JulyImages.Callback cb) {
+        float capH = 9f + 18f + 3f + 13f + 10f;
+        float artB = b - capH;
+        d.fill(c, l, t, r, artB, d.hair);
+        Bitmap art = now != null && now.art.length() > 0 ? JulyImages.get(now.art, cb) : null;
+        if (art != null) d.image(c, art, l, t, r, artB);
+        else d.centered(c, "ALBUM ART", (l + r) / 2f, Draw.mid(t, artB - t, 10f), d.med, 10f, d.muted, Draw.em(10f, 0.14f));
+
+        int st = JulyPlayer.state();
+        String state = st == JulyPlayer.CONNECTING ? "Connecting" : (st == JulyPlayer.PLAYING ? "Live" : "Paused");
+        float tr = Draw.em(10f, 0.1f);
+        String ls = Draw.up(state);
+        float lw = d.width(ls, d.semi, 10f, tr) + 18f;
+        d.fill(c, l + 10f, t + 10f, l + 10f + lw, t + 10f + 18f, d.ink);
+        d.text(c, ls, l + 19f, Draw.mid(t + 10f, 18f, 10f), d.semi, 10f, d.bg, tr);
+        JulyRadio.Show sh = now != null ? now.show : null;
+        if (sh != null && sh.name.length() > 0) {
+            float tr2 = Draw.em(10f, 0.08f);
+            String sn = d.fit(Draw.up(sh.name), (r - l) / 2f, d.med, 10f, tr2);
+            float sw = d.width(sn, d.med, 10f, tr2) + 18f;
+            d.fill(c, r - 10f - sw, t + 10f, r - 10f, t + 28f, d.bg);
+            d.box(c, r - 10f - sw, t + 10f, r - 10f, t + 28f, d.ink);
+            d.text(c, sn, r - 10f - sw + 9f, Draw.mid(t + 10f, 18f, 10f), d.med, 10f, d.ink, tr2);
+        }
+
+        d.fill(c, l, artB, r, b, 0xFF0A0A0A);
+        String title = now != null ? now.headline() : JulyRadio.STATION_NAME;
+        String sub = now != null ? now.subline() : (st == JulyPlayer.CONNECTING ? "Connecting..." : "24/7 · Nairobi");
+        float tw = r - l - 28f - 28f;
+        d.text(c, d.fit(Draw.up(title), tw, d.semi, 15f, 0f), l + 14f, artB + 9f + 14f, d.semi, 15f, 0xFFF5F5F5, 0f);
+        if (sub.length() > 0) {
+            float str = Draw.em(11f, 0.04f);
+            d.text(c, d.fit(Draw.up(sub), tw, d.med, 11f, str), l + 14f, artB + 9f + 18f + 3f + 10f, d.med, 11f, 0xFFADAAAD, str);
+        }
+        float hx = r - 14f - 18f, hy = artB + capH / 2f - 9f;
+        if (saved) {
+            d.p.setStyle(android.graphics.Paint.Style.FILL);
+        }
+        d.icon(c, Icons.HEART, hx, hy, 18f, saved ? 0xFFF5F5F5 : 0xFF8A8A8A);
+        d.box(c, l, t, r, b, d.ink);
     }
 
     // ---- B3 · What's on ----
