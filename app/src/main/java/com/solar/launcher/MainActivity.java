@@ -12800,11 +12800,13 @@ public class MainActivity extends Activity {
             changeScreen(STATE_SETTINGS);
         } else if (HomeMenuConfig.ID_JULY.equals(id)) {
             // July Radio — hub works offline (favourites); live parts say "connect to the internet".
-            if (mediaSuite == null) return;
-            if (!hasInternetConnection()) {
-                Toast.makeText(this, getString(R.string.july_offline), Toast.LENGTH_LONG).show();
+            // July Radio — opens its own full-screen July screens (fast, matches the July design).
+            try {
+                startActivity(new android.content.Intent(this, com.solar.launcher.july.JulyActivity.class));
+            } catch (Exception e) {
+                if (mediaSuite == null) return;
+                mediaSuite.openJulyHub();
             }
-            mediaSuite.openJulyHub();
         } else if (HomeMenuConfig.ID_RADIO.equals(id) || HomeMenuConfig.ID_FM.equals(id)) {
             if (mediaSuite != null) mediaSuite.clearJulyHub(); // July Radio: leave July mode first
             // 2026-07-16 — Radio/FM behind Debug experiment (off by default).

@@ -92,6 +92,15 @@
             android:noHistory="true"
             android:screenOrientation="sensor"
             android:theme="@style/Theme.Solar" />
+        <!-- July Radio — full-screen July Radio app (opens from the home menu).
+             Reversal: delete this entry and july/JulyActivity. -->
+        <activity
+            android:name=".july.JulyActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
         <activity
             android:name=".EmergencyRecoveryActivity"
             android:exported="false"

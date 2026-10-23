@@ -145,6 +145,16 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --tests "com.solar.launcher.XposedParityVerifyScriptsTest" --tests "com.solar.launcher.Y2MtkFlashManifestTest" -q
 
+      - name: Fetch IBM Plex Mono for the July Radio screens
+        run: |
+          mkdir -p app/src/main/assets/fonts
+          for f in Medium SemiBold MediumItalic; do
+            curl -fsSL --retry 3 -o "app/src/main/assets/fonts/IBMPlexMono-$f.ttf" \
+              "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/IBMPlexMono-$f.ttf" \
+              || echo "::warning::could not fetch IBMPlexMono-$f.ttf (July screens fall back to the system mono font)"
+          done
+          ls -la app/src/main/assets/fonts
+
       - name: Build signed release APK
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
