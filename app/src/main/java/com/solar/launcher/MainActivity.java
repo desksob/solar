@@ -20294,6 +20294,63 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         if (root != null) {
             root.addView(julyChrome, new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            // Solar re-shows preview panes / restyles rows from many places; re-assert after every layout.
+            root.getViewTreeObserver().addOnGlobalLayoutListener(
+                    new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                        @Override
+                        public void onGlobalLayout() {
+                            enforceJulyFrame();
+                        }
+                    });
+        }
+    }
+
+    /**
+     * 2026-10-23 — July: after any layout, hide preview panes and normalise every visible list row
+     * to the design's type (14px caps label, 13px in library lists, 10px secondary text).
+     * Only touches values that differ, so it settles after one pass.
+     */
+    private void enforceJulyFrame() {
+        if (!julyLayoutActive()) return;
+        hideIfShown(settingsPreviewPane);
+        hideIfShown(ivMenuPreview);
+        hideIfShown(tvMenuPreviewTitle);
+        hideIfShown(tvMenuPreviewArtist);
+        hideIfShown(findViewById(R.id.podcast_preview_pane));
+        LinearLayout list = null;
+        if (currentScreenState == STATE_MENU) list = containerHomeMenuItems;
+        else if (layoutSettingsMode != null && layoutSettingsMode.getVisibility() == View.VISIBLE) list = containerSettingsItems;
+        else if (layoutBrowserMode != null && layoutBrowserMode.getVisibility() == View.VISIBLE) list = containerBrowserItems;
+        if (list == null) return;
+        float u = julyUnit();
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View row = list.getChildAt(i);
+            boolean library = Integer.valueOf(2).equals(row.getTag(R.id.july_row_style));
+            normalizeJulyRowText(row, new int[] {0}, (library ? 13f : 14f) * u, 10f * u);
+        }
+    }
+
+    private static void hideIfShown(View v) {
+        if (v != null && v.getVisibility() != View.GONE) v.setVisibility(View.GONE);
+    }
+
+    /** First TextView in the row = label (caps, labelPx); any later TextView = secondary (secondaryPx). */
+    private static void normalizeJulyRowText(View v, int[] seen, float labelPx, float secondaryPx) {
+        if (v instanceof TextView) {
+            TextView tv = (TextView) v;
+            float want = seen[0] == 0 ? labelPx : secondaryPx;
+            if (Math.abs(tv.getTextSize() - want) > 0.5f) {
+                tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, want);
+            }
+            if (seen[0] == 0) {
+                android.text.method.TransformationMethod tm = tv.getTransformationMethod();
+                // setAllCaps relayouts every call; only when not already caps (class is @hide on 17).
+                if (tm == null || !tm.getClass().getName().contains("AllCaps")) tv.setAllCaps(true);
+            }
+            seen[0]++;
+        } else if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) normalizeJulyRowText(g.getChildAt(i), seen, labelPx, secondaryPx);
         }
     }
 
