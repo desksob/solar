@@ -214,8 +214,11 @@ public final class JulyRadio {
 
     /** One fetch; never throws. Returns the parsed data or null. */
     static Now fetchOnce() {
+        long t0 = System.currentTimeMillis();
         try {
             byte[] raw = SolarHttp.getBytes(NOW_URL, "application/json", "JulyRadioY1/1.0");
+            com.solar.launcher.SolarLog.i("July", "now fetch ok " + raw.length + "B in "
+                    + (System.currentTimeMillis() - t0) + "ms");
             JSONObject o = new JSONObject(new String(raw, "UTF-8"));
             if (!o.optBoolean("ok", true)) return null;
             final Now n = new Now(o);
@@ -232,6 +235,8 @@ public final class JulyRadio {
             }
             return n;
         } catch (Exception e) {
+            com.solar.launcher.SolarLog.e("July", "now fetch failed after "
+                    + (System.currentTimeMillis() - t0) + "ms", e);
             return null;
         }
     }

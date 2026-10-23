@@ -936,6 +936,8 @@ public final class MediaSuiteHost {
             new com.solar.launcher.july.JulyRadio.Listener() {
                 @Override
                 public void onJulyNow(com.solar.launcher.july.JulyRadio.Now now) {
+                    com.solar.launcher.SolarLog.i("July", "onJulyNow playing=" + isJulyPlaying()
+                            + " hub=" + julyHubMode + " title=" + now.title);
                     if (julyHubMode && julySub == JULY_SUB_SCHEDULE
                             && host.getCurrentScreenState() == STATE_RADIO) {
                         buildJulyHubUi();
@@ -983,6 +985,7 @@ public final class MediaSuiteHost {
 
     /** Start the July stream through the shared internet radio player and open Now Playing. */
     public void startJulyStation() {
+        com.solar.launcher.SolarLog.i("July", "startJulyStation");
         if (!host.requireInternet(R.string.july_offline)) return;
         stopOtherRadioPlayback(false);
         host.stopNonFmPlayback();
