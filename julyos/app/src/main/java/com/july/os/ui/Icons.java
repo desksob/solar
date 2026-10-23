@@ -22,7 +22,7 @@ public final class Icons {
             BOOK = 22, CLOCK = 23, SEARCH = 24, DOWNLOAD = 25, GLOBE = 26, REPEAT = 27, POWER = 28,
             SERVER = 29, INFO = 30, WIFI_OFF = 31, WARNING = 32, RESTART = 33, PENCIL = 34,
             RECORDER = 35, CALC = 36, DISPLAY = 37, CLOSE = 38, CHECK = 39, PAUSE = 40, PREV = 41,
-            NEXT = 42, USB = 43, LOCK = 44, BATTERY_LOW = 45, HEADPHONES = 46, TRASH = 47;
+            NEXT = 42, USB = 43, LOCK = 44, BATTERY_LOW = 45, HEADPHONES = 46, TRASH = 47, PLUS = 48, BOOKMARK = 49, BATTERY = 50, CHARGING = 51;
 
     private Icons() {}
 
@@ -235,6 +235,22 @@ public final class Icons {
                 p.moveTo(5, 3); p.lineTo(19, 3); p.moveTo(5, 21); p.lineTo(19, 21);
                 p.moveTo(7, 3); p.cubicTo(7, 8, 12, 9, 12, 12); p.cubicTo(12, 15, 7, 16, 7, 21);
                 p.moveTo(17, 3); p.cubicTo(17, 8, 12, 9, 12, 12); p.cubicTo(12, 15, 17, 16, 17, 21);
+                break;
+            case PLUS:
+                p.moveTo(12, 5); p.lineTo(12, 19);
+                p.moveTo(5, 12); p.lineTo(19, 12);
+                break;
+            case BOOKMARK:
+                p.moveTo(6, 3); p.lineTo(18, 3); p.lineTo(18, 21); p.lineTo(12, 16); p.lineTo(6, 21); p.close();
+                break;
+            case BATTERY:
+                p.addRect(2, 7, 19, 17, Path.Direction.CW);
+                p.moveTo(21, 10); p.lineTo(21, 14);
+                break;
+            case CHARGING:
+                p.addRect(2, 7, 19, 17, Path.Direction.CW);
+                p.moveTo(21, 10); p.lineTo(21, 14);
+                p.moveTo(11, 8.5f); p.lineTo(8, 12.5f); p.lineTo(12, 12.5f); p.lineTo(9, 15.5f);
                 break;
             case MIC:
                 p.addRect(9, 3, 15, 14, Path.Direction.CW);

@@ -148,6 +148,14 @@ public final class Draw {
         return top + h / 2f + size * 0.36f;
     }
 
+    /** Keep the end of {@code s} (what's being typed) when it's wider than maxW. */
+    public String fitLeft(String s, float maxW, Typeface tf, float size) {
+        if (width(s, tf, size, 0f) <= maxW) return s;
+        int i = 0;
+        while (i < s.length() && width("..." + s.substring(i), tf, size, 0f) > maxW) i++;
+        return "..." + s.substring(i);
+    }
+
     public String fit(String s, float maxW, Typeface tf, float size, float track) {
         if (s == null) return "";
         if (width(s, tf, size, track) <= maxW) return s;

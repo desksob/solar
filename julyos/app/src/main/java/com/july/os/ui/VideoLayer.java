@@ -60,6 +60,7 @@ public final class VideoLayer implements SurfaceHolder.Callback {
         pendingStart = startMs;
         JulyApp.get().player().pause();
         if (JulyPlayer.isActive()) JulyPlayer.stop();
+        com.july.os.spoken.Spoken.get().pause();
         set(CONNECTING);
         surface.setVisibility(View.VISIBLE);
         if (surfaceReady) open();

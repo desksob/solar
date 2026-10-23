@@ -30,6 +30,11 @@ public final class Debug {
         if ("bt".equals(name)) return new BtScreens.List_();
         if ("btscan".equals(name)) return new BtScreens.Scan();
         if ("display".equals(name)) return new DisplayScreen();
+        if ("podcasts".equals(name)) return new SpokenScreens.PodcastMenu();
+        if ("shows".equals(name)) return new SpokenScreens.Shows();
+        if ("books".equals(name)) return new SpokenScreens.BooksMenu();
+        if ("booklist".equals(name)) return new SpokenScreens.BookList();
+        if ("podsearch".equals(name)) return new SpokenScreens.SearchResults("radio");
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

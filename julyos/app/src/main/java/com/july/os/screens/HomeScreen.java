@@ -28,11 +28,13 @@ public final class HomeScreen extends ListScreen {
         boolean online = shell != null && shell.online();
         List<Row> r = new ArrayList<Row>();
         Track cur = pl.current();
-        String npValue = JulyPlayer.isActive() ? "July Radio" : (cur != null ? cur.title : "");
+        final com.july.os.spoken.Spoken sp = com.july.os.spoken.Spoken.get();
+        String npValue = JulyPlayer.isActive() ? "July Radio" : sp.active() ? sp.item().title : (cur != null ? cur.title : "");
         r.add(new Row(Icons.PLAY, "Now Playing").value(npValue).on(new Runnable() {
             @Override
             public void run() {
                 if (JulyPlayer.isActive()) shell.push(new RadioScreens.Live());
+                else if (sp.active()) shell.push(new SpokenScreens.Player(null));
                 else if (pl.hasQueue()) shell.push(new NowPlayingScreen());
                 else shell.toast(Icons.MUSIC, "Nothing playing yet");
             }
@@ -67,8 +69,18 @@ public final class HomeScreen extends ListScreen {
                 shell.push(new PhotoScreens.Menu());
             }
         }));
-        r.add(new Row(Icons.MIC, "Podcasts").chevron().on(coming("Podcasts")));
-        r.add(new Row(Icons.BOOK, "Audiobooks").chevron().on(coming("Audiobooks")));
+        r.add(new Row(Icons.MIC, "Podcasts").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new SpokenScreens.PodcastMenu());
+            }
+        }));
+        r.add(new Row(Icons.BOOK, "Audiobooks").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new SpokenScreens.BooksMenu());
+            }
+        }));
         r.add(new Row(Icons.RADIO, "FM Radio").chevron().on(coming("FM Radio")));
         r.add(new Row(Icons.GLOBE, "Internet radio").chevron().on(coming("Internet radio")));
         r.add(new Row(Icons.DOWNLOAD, "Get Music").chevron().on(coming("Get Music")));

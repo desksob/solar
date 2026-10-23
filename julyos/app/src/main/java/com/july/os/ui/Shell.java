@@ -565,7 +565,9 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
                 showPowerMenu();
                 break;
             case PLAY:
-                if (com.july.os.radio.JulyPlayer.isActive() || !pl.hasQueue()) {
+                if (com.july.os.spoken.Spoken.get().active() && !pl.isPlaying() && !com.july.os.radio.JulyPlayer.isActive()) {
+                    com.july.os.spoken.Spoken.get().toggle();
+                } else if (com.july.os.radio.JulyPlayer.isActive() || !pl.hasQueue()) {
                     com.july.os.screens.RadioScreens.togglePlay(this);
                 } else {
                     pl.toggle();

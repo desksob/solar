@@ -65,6 +65,7 @@ public final class JulyPlayer {
     public static synchronized void start(Context ctx) {
         com.july.os.JulyApp app = com.july.os.JulyApp.get();
         if (app != null) app.player().stopForOther(); // one sound at a time
+        com.july.os.spoken.Spoken.get().pause();
         release();
         try {
             // Ask other players (Solar's music) to step aside.

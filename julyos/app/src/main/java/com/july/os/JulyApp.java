@@ -25,6 +25,7 @@ public final class JulyApp extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        com.july.os.net.Tls.init(this);
         prefs = getSharedPreferences("july", MODE_PRIVATE);
         library = new Library(this);
         player = new Player(this);
@@ -34,6 +35,7 @@ public final class JulyApp extends Application {
             @Override
             public void run() {
                 if (JulyPlayer.isActive()) JulyPlayer.stop();
+                com.july.os.spoken.Spoken.get().pause();
             }
         });
         library.load();
