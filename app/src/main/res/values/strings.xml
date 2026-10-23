@@ -88,6 +88,7 @@
     <string name="diag_shutting_down">Shutting down…</string>
     <string name="diag_restarting">Restarting…</string>
     <!-- 2026-07-16 — Full-screen first boot / self-heal wait (was blank black screen). -->
+    <string name="july_section_home">Home</string>
     <string name="getting_things_ready">Getting things ready, please wait…</string>
     <string name="getting_things_ready_detail">Solar is finishing setup on this player.</string>
     <string name="support_link_kofi_intro">Thank you for supporting Solar. Open this page in a browser to donate:</string>

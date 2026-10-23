@@ -5,7 +5,7 @@
     "authorUrl": "https://github.com/desksob/solar",
     "description": "July Radio's look: white, black ink, IBM Plex Mono.",
     "externalDownloadUrl": "",
-    "version": "3"
+    "version": "4"
   },
   "themeCover": "cover_YS.png",
   "desktopWallpaper": "desk_bg001_YS.png",
@@ -25,7 +25,8 @@
     "enableMatch_Now_Playing_To_Theme": "true",
     "disableNow_Playing_Backdrop": "true",
     "nowPlayingInfoBars": "none",
-    "nowPlayingTextColour": "#0a0a0a"
+    "nowPlayingTextColour": "#0a0a0a",
+    "enableFull_Width_Menus": "true"
   },
   "itemConfig": {
     "itemTextColor": "#0a0a0a",

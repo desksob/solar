@@ -1079,6 +1079,17 @@ public class ThemeManager {
         }
     }
 
+    /** 2026-10-23 — July Dark: same frame, light ink on black. */
+    public static boolean isJulyDarkTheme() {
+        if (!isJulyTheme()) return false;
+        try {
+            JSONObject info = getCurrentTheme().root.optJSONObject("theme_info");
+            return info != null && info.optString("title", "").toLowerCase(Locale.US).contains("dark");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Title plus optional theme_info.version, so a restyle under the same name still re-seeds. */
     private static String titleOf(JSONObject root) {
         JSONObject info = root.optJSONObject("theme_info");

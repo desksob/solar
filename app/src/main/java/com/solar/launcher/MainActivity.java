@@ -11944,6 +11944,7 @@ public class MainActivity extends Activity {
         }
         // Arrow is optional (submenus / home); when present it must track the same hop as decoration.
         if (arrow != null) arrow.setVisibility(focused ? View.VISIBLE : View.GONE);
+        applyJulyRowExtras(row, focused, label, value, arrow, rowKind);
     }
 
     private void applyY1ListRowStyle(View row, boolean focused, TextView label, TextView value, ImageView arrow) {
@@ -12941,6 +12942,7 @@ public class MainActivity extends Activity {
         }
         applyStatusBarTitleMarquee();
         syncStatusBarLoadingThrobber();
+        updateJulyChrome();
     }
 
     /**
@@ -20204,6 +20206,222 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         applyPodcastBrowserLayout();
         applySettingsListLayout();
         applyA5PortraitChrome();
+        applyJulyLayout();
+    }
+
+    // ---- 2026-10-23 — July design frame (header / section bar / NEXT strip / hints) ----
+
+    private com.solar.launcher.july.JulyChromeView julyChrome;
+    private boolean julyHidStatusBar;
+    private boolean julyStripShown;
+
+    /** July frame applies on the Y1/Y2 landscape panel under a July theme (A5 / phone / portrait keep stock). */
+    private boolean julyLayoutActive() {
+        return ThemeManager.isJulyTheme() && !DeviceFeatures.isA5() && !isPhoneChromeActive()
+                && !A5PortraitChrome.usePortraitChrome(this);
+    }
+
+    /** Design units (480x360 mockup px) → panel px. */
+    private float julyUnit() {
+        int w = screenWidthPx > 0 ? screenWidthPx : getResources().getDisplayMetrics().widthPixels;
+        int h = screenHeightPx > 0 ? screenHeightPx : getResources().getDisplayMetrics().heightPixels;
+        return Math.min(w / 480f, h / 360f);
+    }
+
+    /**
+     * Move the menu / browse / settings lists into the design's list box and put the July frame on top.
+     * Layman: lists start under the black section bar, 16px from each side, 34px rows — like the mockups.
+     * Tech: runs after applyFullWidthMenusLayout so it wins; status strip hidden (chrome draws it).
+     * Reversal: delete this method + call; status bar and Solar geometry come back.
+     */
+    private void applyJulyLayout() {
+        if (!julyLayoutActive()) {
+            if (julyChrome != null) julyChrome.setVisibility(View.GONE);
+            if (julyHidStatusBar) {
+                View sb = findViewById(R.id.layout_status_bar);
+                if (sb != null) sb.setVisibility(View.VISIBLE);
+                julyHidStatusBar = false;
+            }
+            return;
+        }
+        ensureJulyChrome();
+        float u = julyUnit();
+        int left = Math.round(com.solar.launcher.july.JulyChromeView.LIST_LEFT * u);
+        int top = Math.round(com.solar.launcher.july.JulyChromeView.LIST_TOP * u);
+        int width = Math.round(com.solar.launcher.july.JulyChromeView.LIST_W * u);
+        int height = Math.round((julyChrome.listBottom() - com.solar.launcher.july.JulyChromeView.LIST_TOP) * u);
+        y1RowWidthPx = width;
+        listRowWidthPx = width;
+        settingsMenuWidthPx = width;
+        menuListHeightPx = height;
+        y1RowHeightPx = Math.round(34f * u);
+        if (menuListHost != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) menuListHost.getLayoutParams();
+            lp.width = width; lp.height = height; lp.leftMargin = left; lp.topMargin = top;
+            menuListHost.setLayoutParams(lp);
+            menuListHost.setBackgroundColor(0x00000000);
+        }
+        if (settingsMenuHost != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) settingsMenuHost.getLayoutParams();
+            lp.width = width; lp.height = height; lp.leftMargin = left; lp.topMargin = top;
+            settingsMenuHost.setLayoutParams(lp);
+            settingsMenuHost.setBackgroundColor(0x00000000);
+        }
+        if (layoutBrowserMode != null) {
+            int sw = screenWidthPx > 0 ? screenWidthPx : Math.round(480 * u);
+            int sh = screenHeightPx > 0 ? screenHeightPx : Math.round(360 * u);
+            layoutBrowserMode.setPadding(left, top, Math.max(0, sw - left - width),
+                    Math.max(0, sh - top - height));
+        }
+        if (julyHomeDivider != null) julyHomeDivider.setVisibility(View.GONE);
+        updateJulyChrome();
+    }
+
+    private void ensureJulyChrome() {
+        if (julyChrome != null) {
+            if (julyChrome.getParent() != null) return;
+        } else {
+            julyChrome = new com.solar.launcher.july.JulyChromeView(this);
+        }
+        ViewGroup root = findViewById(android.R.id.content);
+        if (root != null) {
+            root.addView(julyChrome, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+    }
+
+    /** Push title, position, scroll, status and NEXT into the frame; shows it only on list screens. */
+    private void updateJulyChrome() {
+        if (julyChrome == null) return;
+        if (!julyLayoutActive()) {
+            julyChrome.setVisibility(View.GONE);
+            return;
+        }
+        LinearLayout list = null;
+        android.view.View scroll = null;
+        if (layoutMainMenu != null && layoutMainMenu.getVisibility() == View.VISIBLE
+                && currentScreenState == STATE_MENU) {
+            list = containerHomeMenuItems; scroll = menuScroll;
+        } else if (layoutSettingsMode != null && layoutSettingsMode.getVisibility() == View.VISIBLE) {
+            list = containerSettingsItems; scroll = settingsScrollView;
+        } else if (layoutBrowserMode != null && layoutBrowserMode.getVisibility() == View.VISIBLE) {
+            list = containerBrowserItems; scroll = scrollViewBrowser;
+        }
+        View sb = findViewById(R.id.layout_status_bar);
+        if (list == null) {
+            julyChrome.setVisibility(View.GONE);
+            if (julyHidStatusBar && sb != null) {
+                sb.setVisibility(View.VISIBLE);
+                julyHidStatusBar = false;
+            }
+            return;
+        }
+        if (julyChrome.getVisibility() != View.VISIBLE) julyChrome.setVisibility(View.VISIBLE);
+        julyChrome.bringToFront();
+        if (sb != null && sb.getVisibility() == View.VISIBLE) {
+            sb.setVisibility(View.INVISIBLE);
+            julyHidStatusBar = true;
+        }
+        julyChrome.setDark(ThemeManager.isJulyDarkTheme());
+
+        String title = currentScreenState == STATE_MENU ? getString(R.string.july_section_home)
+                : String.valueOf(getStatusBarContextTitle());
+        int total = list.getChildCount();
+        int index = -1;
+        if (currentScreenState == STATE_MENU) {
+            index = focusedHomeMenuIndex;
+        } else {
+            View f = getCurrentFocus();
+            for (int i = 0; i < total; i++) {
+                View row = list.getChildAt(i);
+                if (row == f || isViewDescendantOf(f, row)) { index = i; break; }
+            }
+        }
+        julyChrome.setSection(title, index, total);
+
+        if (scroll != null && list.getHeight() > 0 && scroll.getHeight() > 0) {
+            float content = Math.max(1f, list.getHeight());
+            julyChrome.setScroll(scroll.getScrollY() / content, Math.min(1f, scroll.getHeight() / content));
+        } else {
+            julyChrome.setScroll(0f, 1f);
+        }
+
+        String next = null;
+        int nextNo = 0;
+        try {
+            PlayQueue q = playback.unifiedQueue();
+            if (q != null && !playback.isRadioActive() && q.size() > q.index() + 1) {
+                PlayQueue.QueueItem it = q.items().get(q.index() + 1);
+                String m = it.streamMeta();
+                if (m != null && m.length() > 0) {
+                    int dot = m.lastIndexOf('.');
+                    next = dot > 0 && m.length() - dot <= 5 ? m.substring(0, dot) : m;
+                    nextNo = q.index() + 2;
+                }
+            }
+        } catch (Exception ignored) {}
+        boolean hadStrip = julyStripShown;
+        julyStripShown = next != null;
+        julyChrome.setNext(next, nextNo);
+        if (hadStrip != julyStripShown) applyJulyLayout(); // list box grows / shrinks with the strip
+
+        boolean wifiOn = false, wifiLinked = false, btOn = false;
+        try {
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+            wifiOn = wm != null && wm.isWifiEnabled();
+            wifiLinked = wifiOn && ConnectivityHelper.isOnline(this);
+        } catch (Exception ignored) {}
+        try {
+            BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
+            btOn = ba != null && ba.isEnabled();
+        } catch (Exception ignored) {}
+        julyChrome.setStatus(wifiOn, wifiLinked, btOn, cachedBatteryLevel > 0 ? cachedBatteryLevel : -1,
+                cachedBatteryCharging);
+    }
+
+    /**
+     * July row extras: 14px label with the design's icon, 34px height, chevron always shown,
+     * small muted value text. Only under the July frame.
+     */
+    private void applyJulyRowExtras(View row, boolean focused, TextView label, TextView value,
+                                    ImageView arrow, int rowKind) {
+        if (!julyLayoutActive()) return;
+        float u = julyUnit();
+        int fg = focused ? y1RowTextColorSelected(rowKind) : y1RowTextColorNormal(rowKind);
+        if (label != null) {
+            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 14f * u);
+            int pad = Math.round(14f * u);
+            if (label.getPaddingLeft() != pad) {
+                label.setPadding(pad, label.getPaddingTop(), label.getPaddingRight(), label.getPaddingBottom());
+            }
+            int icon = com.solar.launcher.july.JulyIcons.forLabel(label.getText());
+            if (icon != 0) {
+                int sz = Math.round(16f * u);
+                android.graphics.drawable.Drawable d =
+                        com.solar.launcher.july.JulyIcons.drawable(icon, fg, sz);
+                d.setBounds(0, 0, sz, sz);
+                label.setCompoundDrawables(d, null, null, null);
+                label.setCompoundDrawablePadding(Math.round(10f * u));
+            } else {
+                label.setCompoundDrawables(null, null, null, null);
+            }
+        }
+        if (value != null) {
+            value.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 10f * u);
+            value.setTextColor(focused ? fg : (fg & 0x00FFFFFF) | 0xB0000000);
+        }
+        if (arrow != null) {
+            arrow.setImageDrawable(com.solar.launcher.july.JulyIcons.drawable(
+                    com.solar.launcher.july.JulyIcons.CHEVRON, fg, Math.round(14f * u)));
+            arrow.setScaleType(ImageView.ScaleType.CENTER);
+            arrow.setVisibility(View.VISIBLE);
+        }
+        ViewGroup.LayoutParams lp = row.getLayoutParams();
+        int want = Math.round(34f * u);
+        if (lp != null && rowKind != Y1_ROW_ITEM && lp.height > 0 && lp.height != want) {
+            lp.height = want;
+            row.setLayoutParams(lp);
+        }
     }
 
     /**
