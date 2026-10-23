@@ -20,12 +20,22 @@ public final class JulyRowDrawable extends Drawable {
     private final int fill;
     private final int ink;
     private final int stroke;
+    private final boolean hairline;
 
     /** @param fill 0 for an outlined row, else the fill colour */
     public JulyRowDrawable(int fill, int ink, int stroke) {
+        this(fill, ink, stroke, false);
+    }
+
+    /**
+     * @param hairline library-list style (C6 Songs): no frame, just a 1px rule under the row in
+     *                 {@code ink} (pass the hair colour); a selected row is a solid {@code fill}.
+     */
+    public JulyRowDrawable(int fill, int ink, int stroke, boolean hairline) {
         this.fill = fill;
         this.ink = ink;
         this.stroke = Math.max(1, stroke);
+        this.hairline = hairline;
     }
 
     @Override
@@ -34,6 +44,13 @@ public final class JulyRowDrawable extends Drawable {
         if (fill != 0) {
             paint.setColor(fill);
             c.drawRect(b, paint);
+        }
+        if (hairline) {
+            if (fill == 0) {
+                paint.setColor(ink);
+                c.drawRect(b.left, b.bottom - stroke, b.right, b.bottom, paint);
+            }
+            return;
         }
         paint.setColor(ink);
         c.drawRect(b.left, b.top, b.right, b.top + stroke, paint);

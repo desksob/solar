@@ -20512,15 +20512,37 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         if (!julyLayoutActive()) return;
         float u = julyUnit();
         int fg = focused ? y1RowTextColorSelected(rowKind) : y1RowTextColorNormal(rowKind);
+        int iconId = label != null ? com.solar.launcher.july.JulyIcons.forLabel(label.getText()) : 0;
+        // Menus (home, settings, Music/Videos menus) are boxed rows with icons (A2, C1, H1);
+        // library lists (songs, artists, queue…) are 44px hairline rows (C6, C14).
+        boolean libraryRow = rowKind == Y1_ROW_ITEM && iconId == 0;
+        Integer style = libraryRow ? 2 : 1;
+        if (!style.equals(row.getTag(R.id.july_row_style))) {
+            int ink = y1RowTextColorNormal(rowKind);
+            int stroke = Math.max(1, Math.round(getResources().getDisplayMetrics().density));
+            android.graphics.drawable.StateListDrawable states =
+                    new android.graphics.drawable.StateListDrawable();
+            android.graphics.drawable.Drawable sel = libraryRow
+                    ? new com.solar.launcher.july.JulyRowDrawable(ink, ink, stroke, true)
+                    : new com.solar.launcher.july.JulyRowDrawable(ink, ink, stroke);
+            android.graphics.drawable.Drawable norm = libraryRow
+                    ? new com.solar.launcher.july.JulyRowDrawable(0,
+                            ThemeManager.isJulyDarkTheme() ? 0xFF262626 : 0xFFE2E2E2, stroke, true)
+                    : new com.solar.launcher.july.JulyRowDrawable(0, ink, stroke);
+            for (int[] st : Y1RowChromePolicy.selectedChromeStates()) states.addState(st, sel);
+            states.addState(new int[] {}, norm);
+            row.setBackground(states);
+            row.setTag(R.id.july_row_style, style);
+        }
         if (label != null) {
             // setSingleLine (marquee) drops the all-caps transformation on API 17; put it back last.
             label.setAllCaps(true);
-            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 14f * u);
+            label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, (libraryRow ? 13f : 14f) * u);
             int pad = Math.round(14f * u);
             if (label.getPaddingLeft() != pad) {
                 label.setPadding(pad, label.getPaddingTop(), label.getPaddingRight(), label.getPaddingBottom());
             }
-            int icon = com.solar.launcher.july.JulyIcons.forLabel(label.getText());
+            int icon = iconId;
             if (icon != 0) {
                 int sz = Math.round(16f * u);
                 android.graphics.drawable.Drawable d =
@@ -20543,8 +20565,8 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             arrow.setVisibility(View.VISIBLE);
         }
         ViewGroup.LayoutParams lp = row.getLayoutParams();
-        int want = Math.round(34f * u);
-        if (lp != null && rowKind != Y1_ROW_ITEM && lp.height > 0 && lp.height != want) {
+        int want = Math.round((libraryRow ? 44f : 34f) * u);
+        if (lp != null && lp.height > 0 && lp.height != want) {
             lp.height = want;
             row.setLayoutParams(lp);
         }

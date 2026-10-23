@@ -5,4 +5,5 @@
     <item type="id" name="tag_adapter_row_binding" />
     <item type="id" name="tag_artwork_request" />
     <item type="id" name="tag_artwork_bitmap_lease" />
+    <item name="july_row_style" type="id" />
 </resources>
