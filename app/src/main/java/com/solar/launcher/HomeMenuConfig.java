@@ -23,7 +23,7 @@ public final class HomeMenuConfig {
      * Schema 7 seeded it; schema 6 made order user-editable.
      * Was: HOME_SCHEMA=7 with tile on default home. Reversal: HOME_SCHEMA=7 + re-add id to defaults.
      */
-    private static final int HOME_SCHEMA = 8;
+    private static final int HOME_SCHEMA = 9;
 
     public static final String ID_NOW_PLAYING = "now_playing";
     public static final String ID_MUSIC = "music";
@@ -228,13 +228,28 @@ public final class HomeMenuConfig {
         }
         // 2026-07-15 — Schema 8: Music → YouTube only; strip home youtube_audio tile.
         // Was: kept tiled after schema 7. Reversal: stop at schema 7 (leave id on home).
-        if (schema < HOME_SCHEMA) {
+        if (schema < 8) {
             List<String> home = new ArrayList<String>(loadHomeOrderIds(prefs));
             List<String> more = new ArrayList<String>(loadMoreOrderIds(prefs));
             home.remove(ID_YOUTUBE_AUDIO);
             more.remove(ID_YOUTUBE_AUDIO);
             saveOrder(prefs, home);
             saveMoreOrder(prefs, more);
+            schema = 8;
+        }
+        // July Radio — Schema 9: add the July Radio tile to existing menus, right after Now Playing.
+        // Layman: phones that already saved a home layout still get the new July Radio entry.
+        // Reversal: set HOME_SCHEMA back to 8 and delete this block.
+        if (schema < HOME_SCHEMA) {
+            List<String> home = new ArrayList<String>(loadHomeOrderIds(prefs));
+            List<String> more = new ArrayList<String>(loadMoreOrderIds(prefs));
+            if (!home.contains(ID_JULY) && !more.contains(ID_JULY)) {
+                int np = home.indexOf(ID_NOW_PLAYING);
+                if (np >= 0) home.add(np + 1, ID_JULY);
+                else home.add(0, ID_JULY);
+                saveOrder(prefs, home);
+            }
+            setShortcutEnabled(prefs, ID_JULY, true);
             schema = HOME_SCHEMA;
         }
         if (prefs.getInt(PREF_HOME_SCHEMA, 1) < schema) {
