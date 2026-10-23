@@ -40,6 +40,7 @@ public final class JulyChromeView extends View {
     private boolean dark;
     private String title = "";
     private int index = -1, total = 0;
+    private String sectionRight; // overrides "n / total" when set (e.g. "2 / 14", "00:12:41")
     private String nextLabel; // null = no strip
     private int nextNumber;
     private boolean wifiOn, wifiConnected, btOn;
@@ -86,8 +87,17 @@ public final class JulyChromeView extends View {
 
     public void setSection(String t, int idx, int tot) {
         String s = t != null ? t : "";
-        if (s.equals(title) && idx == index && tot == total) return;
-        title = s; index = idx; total = tot;
+        if (s.equals(title) && idx == index && tot == total && sectionRight == null) return;
+        title = s; index = idx; total = tot; sectionRight = null;
+        invalidate();
+    }
+
+    /** Section bar with free text on the right (Now Playing "2 / 14", radio elapsed time). */
+    public void setSectionRaw(String t, String right) {
+        String s = t != null ? t : "";
+        String r = right != null ? right : "";
+        if (s.equals(title) && r.equals(sectionRight)) return;
+        title = s; sectionRight = r; index = -1; total = 0;
         invalidate();
     }
 
@@ -182,7 +192,10 @@ public final class JulyChromeView extends View {
         fill(c, 0, HEADER_H, W, HEADER_H + SECTION_H, ink());
         float base = HEADER_H + 15f;
         text(c, up(title), 14f, base, tfMed, 10f, bg(), 1.6f);
-        if (index >= 0 && total > 0) {
+        if (sectionRight != null && sectionRight.length() > 0) {
+            String r = up(sectionRight);
+            text(c, r, W - 14f - textW(r, tfMed, 10f, 1.6f), base, tfMed, 10f, bg(), 1.6f);
+        } else if (index >= 0 && total > 0) {
             String r = (index + 1) + " / " + total;
             text(c, r, W - 14f - textW(r, tfMed, 10f, 1.6f), base, tfMed, 10f, bg(), 1.6f);
         }

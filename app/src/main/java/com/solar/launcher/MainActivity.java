@@ -11976,7 +11976,8 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
         // #endregion
         if (julyHomeDivider != null) {
-            julyHomeDivider.setVisibility(ActiveThemeEngine.isJjMode() ? View.GONE : View.VISIBLE);
+            julyHomeDivider.setVisibility(ActiveThemeEngine.isJjMode() || julyLayoutActive()
+                    ? View.GONE : View.VISIBLE);
         }
         if (ActiveThemeEngine.isJjMode()) {
             buildJjHomeMenu();
@@ -12350,6 +12351,7 @@ public class MainActivity extends Activity {
      */
     private void ensureJulyHomeDivider() {
         if (julyHomeDivider != null || !(layoutMainMenu instanceof FrameLayout)) return;
+        if (julyLayoutActive()) return; // the July frame has no list/preview split
         if (DeviceFeatures.isA5() || isPhoneChromeActive()) return;
         android.content.res.Resources r = getResources();
         int listRight = r.getDimensionPixelSize(R.dimen.y1_menu_left)
@@ -20245,6 +20247,11 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             return;
         }
         ensureJulyChrome();
+        isFullWidthMenus = true; // design lists are full width; no preview pane
+        if (ivMenuPreview != null) ivMenuPreview.setVisibility(View.GONE);
+        if (tvMenuPreviewTitle != null) tvMenuPreviewTitle.setVisibility(View.GONE);
+        if (tvMenuPreviewArtist != null) tvMenuPreviewArtist.setVisibility(View.GONE);
+        if (settingsPreviewPane != null) settingsPreviewPane.setVisibility(View.GONE);
         float u = julyUnit();
         int left = Math.round(com.solar.launcher.july.JulyChromeView.LIST_LEFT * u);
         int top = Math.round(com.solar.launcher.july.JulyChromeView.LIST_TOP * u);
@@ -20295,11 +20302,14 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         if (julyChrome == null) return;
         if (!julyLayoutActive()) {
             julyChrome.setVisibility(View.GONE);
+            showJulyPlayer(false);
             return;
         }
         LinearLayout list = null;
         android.view.View scroll = null;
-        if (layoutMainMenu != null && layoutMainMenu.getVisibility() == View.VISIBLE
+        if (currentScreenState == STATE_PLAYER) {
+            // Player wins even if a list layout is still VISIBLE underneath it.
+        } else if (layoutMainMenu != null && layoutMainMenu.getVisibility() == View.VISIBLE
                 && currentScreenState == STATE_MENU) {
             list = containerHomeMenuItems; scroll = menuScroll;
         } else if (layoutSettingsMode != null && layoutSettingsMode.getVisibility() == View.VISIBLE) {
@@ -20308,6 +20318,20 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             list = containerBrowserItems; scroll = scrollViewBrowser;
         }
         View sb = findViewById(R.id.layout_status_bar);
+        boolean onPlayer = list == null && currentScreenState == STATE_PLAYER;
+        showJulyPlayer(onPlayer);
+        if (onPlayer) {
+            if (julyChrome.getVisibility() != View.VISIBLE) julyChrome.setVisibility(View.VISIBLE);
+            if (sb != null && sb.getVisibility() == View.VISIBLE) {
+                sb.setVisibility(View.INVISIBLE);
+                julyHidStatusBar = true;
+            }
+            julyChrome.setDark(ThemeManager.isJulyDarkTheme());
+            julyChrome.setScroll(0f, 1f);
+            julyChrome.setNext(null, 0);
+            fillJulyPlayer();
+            return;
+        }
         if (list == null) {
             julyChrome.setVisibility(View.GONE);
             if (julyHidStatusBar && sb != null) {
@@ -20317,7 +20341,6 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             return;
         }
         if (julyChrome.getVisibility() != View.VISIBLE) julyChrome.setVisibility(View.VISIBLE);
-        julyChrome.bringToFront();
         if (sb != null && sb.getVisibility() == View.VISIBLE) {
             sb.setVisibility(View.INVISIBLE);
             julyHidStatusBar = true;
@@ -20379,6 +20402,107 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
                 cachedBatteryCharging);
     }
 
+    // ---- July Now Playing (C12 local / B1 radio) ----
+
+    private com.solar.launcher.july.JulyPlayerView julyPlayer;
+    private final Runnable julyPlayerTick = new Runnable() {
+        @Override
+        public void run() {
+            if (julyPlayer == null || julyPlayer.getVisibility() != View.VISIBLE) return;
+            fillJulyPlayer();
+            progressHandler.postDelayed(this, 300L);
+        }
+    };
+
+    /** Show / hide the July Now Playing body over Solar's player (Solar keeps running underneath). */
+    private void showJulyPlayer(boolean show) {
+        if (show) {
+            if (julyPlayer == null) julyPlayer = new com.solar.launcher.july.JulyPlayerView(this);
+            if (julyPlayer.getParent() == null) {
+                ViewGroup root = findViewById(android.R.id.content);
+                if (root == null) return;
+                root.addView(julyPlayer, new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+            View card = findViewById(R.id.july_np_card);
+            if (card != null) card.setVisibility(View.GONE);
+            if (julyPlayer.getVisibility() != View.VISIBLE) {
+                julyPlayer.setVisibility(View.VISIBLE);
+                progressHandler.removeCallbacks(julyPlayerTick);
+                progressHandler.post(julyPlayerTick);
+            }
+        } else if (julyPlayer != null && julyPlayer.getVisibility() != View.GONE) {
+            julyPlayer.setVisibility(View.GONE);
+            progressHandler.removeCallbacks(julyPlayerTick);
+        }
+    }
+
+    private static String julyText(View v) {
+        if (!(v instanceof TextView)) return "";
+        CharSequence t = ((TextView) v).getText();
+        return t != null ? t.toString().trim() : "";
+    }
+
+    /** Copy Solar's Now Playing values into the July body + frame. */
+    private void fillJulyPlayer() {
+        if (julyPlayer == null || julyChrome == null) return;
+        com.solar.launcher.july.JulyPlayerView v = julyPlayer;
+        v.dark = ThemeManager.isJulyDarkTheme();
+        v.title = julyText(findViewById(R.id.tv_player_title));
+        v.artist = julyText(findViewById(R.id.tv_player_artist));
+        v.album = julyText(findViewById(R.id.tv_player_album));
+        v.artSource = ivAlbumArt;
+        v.paused = ivPauseOverlay != null && ivPauseOverlay.getVisibility() == View.VISIBLE;
+        v.shuffle = isShuffleMode;
+        v.repeat = repeatMode == 2 ? 1 : (repeatMode == 1 ? 2 : 0);
+        ProgressBar pb = findViewById(R.id.transport_progress);
+        v.progress = pb != null && pb.getMax() > 0 ? pb.getProgress() / (float) pb.getMax() : -1f;
+        ProgressBar vol = findViewById(R.id.transport_volume_progress);
+        v.volume = vol != null && vol.getVisibility() == View.VISIBLE && vol.getMax() > 0
+                ? vol.getProgress() / (float) vol.getMax() : -1f;
+        v.timeLeft = julyText(findViewById(R.id.transport_time_current));
+        v.timeRight = julyText(findViewById(R.id.transport_time_total));
+        boolean julyLive = mediaSuite != null && mediaSuite.isJulyPlaying();
+        v.saved = julyLive && mediaSuite.isJulyCurrentSaved();
+        String section;
+        String right = "";
+        if (playback.isRadioActive()) {
+            v.mode = com.solar.launcher.july.JulyPlayerView.RADIO;
+            v.pill = getString(R.string.july_pill_live);
+            v.showName = "";
+            v.showMeta = "";
+            PlayQueue.QueueItem cur = playback.unifiedQueue().current();
+            String station = cur != null && cur.radioName != null ? cur.radioName : "";
+            if (julyLive) {
+                com.solar.launcher.july.JulyRadio.Now n = com.solar.launcher.july.JulyRadio.latest();
+                station = com.solar.launcher.july.JulyRadio.STATION_NAME;
+                if (n != null && n.show != null) {
+                    v.pill = getString(R.string.july_pill_on_air);
+                    v.showName = n.show.name;
+                    v.showMeta = (n.show.host.length() > 0 ? "with " + n.show.host + " · " : "")
+                            + n.show.localTimes();
+                }
+            } else {
+                v.showName = station;
+                v.showMeta = cur != null && cur.radioSubtitle != null ? cur.radioSubtitle : "";
+            }
+            section = (station.length() > 0 ? station : getString(R.string.status_radio_internet))
+                    + " · " + getString(R.string.july_pill_live);
+            right = v.timeLeft;
+            julyChrome.setHints(julyLive
+                    ? new String[][]{{"Center", v.paused ? "Play" : "Pause"}, {"Hold", "Save song"}, {"Menu", "Back"}}
+                    : new String[][]{{"Center", v.paused ? "Play" : "Pause"}, {"Hold", "Options"}, {"Menu", "Back"}});
+        } else {
+            v.mode = com.solar.launcher.july.JulyPlayerView.LOCAL;
+            section = getString(R.string.july_section_now_playing);
+            right = julyText(findViewById(R.id.tv_player_track_count));
+            julyChrome.setHints(new String[][]{{"Center", v.paused ? "Play" : "Pause"},
+                    {"Prev/Next", "Skip"}, {"Hold", "Options"}});
+        }
+        julyChrome.setSectionRaw(section, right);
+        v.invalidate();
+    }
+
     /**
      * July row extras: 14px label with the design's icon, 34px height, chevron always shown,
      * small muted value text. Only under the July frame.
@@ -20389,6 +20513,8 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         float u = julyUnit();
         int fg = focused ? y1RowTextColorSelected(rowKind) : y1RowTextColorNormal(rowKind);
         if (label != null) {
+            // setSingleLine (marquee) drops the all-caps transformation on API 17; put it back last.
+            label.setAllCaps(true);
             label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 14f * u);
             int pad = Math.round(14f * u);
             if (label.getPaddingLeft() != pad) {
@@ -21226,7 +21352,7 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
 
     private void updateHomeMenuPreviewVisibility() {
         if (ivMenuPreview == null) return;
-        boolean hidePreview = isFullWidthMenus
+        boolean hidePreview = isFullWidthMenus || julyLayoutActive()
                 || (layoutWidgets != null && layoutWidgets.getVisibility() == View.VISIBLE);
         ivMenuPreview.setVisibility(hidePreview ? View.GONE : View.VISIBLE);
         if (tvMenuPreviewTitle != null) {
