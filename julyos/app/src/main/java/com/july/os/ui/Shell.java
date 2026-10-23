@@ -124,8 +124,8 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         setContentView(root);
         bootAt = SystemClock.uptimeMillis();
         debugKeys = getIntent() != null && getIntent().getBooleanExtra("debugKeys", false);
-        if (getIntent() != null && getIntent().getStringExtra("open") != null) openFromIntent(getIntent());
         push(new HomeScreen());
+        if (getIntent() != null && getIntent().getStringExtra("open") != null) openFromIntent(getIntent());
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
         com.july.os.media.Gallery.get().scan(null); // videos & photos ready before anyone opens them

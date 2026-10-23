@@ -98,6 +98,12 @@ public final class HlsProxy {
             String url = URLDecoder.decode(path.substring(q + 3), "UTF-8");
             boolean list = path.startsWith("/p.m3u8");
             byte[] body = fetch(url);
+            // ErsatzTV: a channel session takes a moment to start; until then the session
+            // playlist redirects back to the channel's master playlist. Wait for the real one.
+            for (int i = 0; list && body != null && i < 10 && isMaster(body) && url.contains("/session/"); i++) {
+                Thread.sleep(1500);
+                body = fetch(url);
+            }
             if (body == null) {
                 reply(s.getOutputStream(), 502, "text/plain", new byte[0]);
                 return;
@@ -120,6 +126,14 @@ public final class HlsProxy {
             Log.e(TAG, "serve failed", e);
         } finally {
             try { s.close(); } catch (Exception ignored) { }
+        }
+    }
+
+    private static boolean isMaster(byte[] b) {
+        try {
+            return new String(b, "UTF-8").contains("#EXT-X-STREAM-INF");
+        } catch (Exception e) {
+            return false;
         }
     }
 
