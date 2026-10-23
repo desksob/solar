@@ -9,7 +9,9 @@ import android.util.LruCache;
 import com.solar.launcher.SolarLog;
 import com.solar.launcher.net.SolarHttp;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +31,10 @@ public final class JulyImages {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final ExecutorService POOL = Executors.newFixedThreadPool(2);
     private static final Set<String> LOADING = new HashSet<String>();
-    private static final Set<String> FAILED = new HashSet<String>();
+    /** url -> time of last failure; retried after RETRY_MS instead of never. */
+    private static final Map<String, Long> FAILED = new HashMap<String, Long>();
+    private static final long RETRY_MS = 60000L;
+    private static final int MAX_BYTES = 2 * 1024 * 1024;
     private static final LruCache<String, Bitmap> CACHE = new LruCache<String, Bitmap>(3 * 1024 * 1024) {
         @Override
         protected int sizeOf(String key, Bitmap b) {
@@ -45,7 +50,9 @@ public final class JulyImages {
         Bitmap hit = CACHE.get(url);
         if (hit != null) return hit;
         synchronized (LOADING) {
-            if (LOADING.contains(url) || FAILED.contains(url)) return null;
+            if (LOADING.contains(url)) return null;
+            Long failedAt = FAILED.get(url);
+            if (failedAt != null && System.currentTimeMillis() - failedAt < RETRY_MS) return null;
             LOADING.add(url);
         }
         POOL.execute(new Runnable() {
@@ -54,7 +61,7 @@ public final class JulyImages {
                 Bitmap out = null;
                 long t0 = System.currentTimeMillis();
                 try {
-                    byte[] raw = SolarHttp.getBytes(url, "image/*", "JulyRadioY1/1.0");
+                    byte[] raw = fetch(fetchUrl(url));
                     BitmapFactory.Options o = new BitmapFactory.Options();
                     o.inJustDecodeBounds = true;
                     BitmapFactory.decodeByteArray(raw, 0, raw.length, o);
@@ -73,7 +80,8 @@ public final class JulyImages {
                 final Bitmap res = out;
                 synchronized (LOADING) {
                     LOADING.remove(url);
-                    if (res == null) FAILED.add(url);
+                    if (res == null) FAILED.put(url, System.currentTimeMillis());
+                    else FAILED.remove(url);
                 }
                 if (res != null) {
                     CACHE.put(url, res);
@@ -89,5 +97,28 @@ public final class JulyImages {
             }
         });
         return null;
+    }
+
+    /** Show images are full giphy GIFs (10+ MB); the 200px still is ~25 KB and all the screen needs. */
+    static String fetchUrl(String url) {
+        if (url.contains("giphy.com/media/") && url.endsWith(".gif") && !url.endsWith("_s.gif")) {
+            return url.substring(0, url.lastIndexOf('/') + 1) + "200_s.gif";
+        }
+        return url;
+    }
+
+    /** https with short timeouts, then http (old TLS on the Y1); refuses anything too big to decode. */
+    private static byte[] fetch(String url) throws Exception {
+        byte[] raw;
+        try {
+            raw = SolarHttp.getBytesQuick(url, "image/*", "JulyRadioY1/1.0", 6, 12);
+        } catch (Exception tls) {
+            if (!url.startsWith("https://")) throw tls;
+            SolarLog.e("JulyImages", "https failed, trying http " + url, tls);
+            raw = SolarHttp.getBytesQuick("http://" + url.substring("https://".length()),
+                    "image/*", "JulyRadioY1/1.0", 6, 12);
+        }
+        if (raw.length > MAX_BYTES) throw new java.io.IOException("image too big: " + raw.length + "B");
+        return raw;
     }
 }
