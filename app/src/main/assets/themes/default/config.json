@@ -3,9 +3,9 @@
     "title": "July",
     "author": "July Radio",
     "authorUrl": "https://github.com/desksob/solar",
-    "description": "Black and white, IBM Plex Mono. The July Radio look for Solar.",
+    "description": "July Radio's look: white, black ink, IBM Plex Mono.",
     "externalDownloadUrl": "",
-    "version": "2"
+    "version": "3"
   },
   "themeCover": "cover_YS.png",
   "desktopWallpaper": "desk_bg001_YS.png",
@@ -25,28 +25,28 @@
     "enableMatch_Now_Playing_To_Theme": "true",
     "disableNow_Playing_Backdrop": "true",
     "nowPlayingInfoBars": "none",
-    "nowPlayingTextColour": "#ffffff"
+    "nowPlayingTextColour": "#0a0a0a"
   },
   "itemConfig": {
-    "itemTextColor": "#ffffff",
-    "itemSelectedTextColor": "#000000",
+    "itemTextColor": "#0a0a0a",
+    "itemSelectedTextColor": "#ffffff",
     "itemSelectedBackground": "1_YS.png",
     "itemBackground": "",
     "itemRightArrow": "2_YS.png"
   },
   "dialogConfig": {
     "dialogOptionBackground": "3.png",
-    "dialogOptionTextColor": "#ffffff",
+    "dialogOptionTextColor": "#0a0a0a",
     "dialogOptionSelectedBackground": "4_YS.png",
-    "dialogOptionSelectedTextColor": "#000000",
-    "dialogBackgroundColor": "#000000"
+    "dialogOptionSelectedTextColor": "#ffffff",
+    "dialogBackgroundColor": "#ffffff"
   },
   "menuConfig": {
-    "menuBackgroundColor": "#000000",
+    "menuBackgroundColor": "#ffffff",
     "menuItemBackground": "",
-    "menuItemTextColor": "#ffffff",
+    "menuItemTextColor": "#0a0a0a",
     "menuItemSelectedBackground": "1_YS.png",
-    "menuItemSelectedTextColor": "#000000"
+    "menuItemSelectedTextColor": "#ffffff"
   },
   "homePageConfig": {
     "nowPlaying": "Now Playing_YS.png",
@@ -128,7 +128,7 @@
     "blDisconnected": "",
     "headsetWithMic": "",
     "headsetWithoutMic": "",
-    "statusBarColor": "#000000",
+    "statusBarColor": "#ffffff",
     "battery": [
       "battery.001.png",
       "battery.002.png",

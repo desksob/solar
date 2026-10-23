@@ -6647,8 +6647,18 @@ public class MainActivity extends Activity {
             int widthPx, int rowKind) {
         android.graphics.drawable.StateListDrawable states =
                 new android.graphics.drawable.StateListDrawable();
-        android.graphics.drawable.Drawable sel = getY1RowBackground(true, widthPx, rowKind);
-        android.graphics.drawable.Drawable norm = getY1RowBackground(false, widthPx, rowKind);
+        android.graphics.drawable.Drawable sel;
+        android.graphics.drawable.Drawable norm;
+        if (ThemeManager.isJulyTheme()) {
+            // 2026-10-23 — July: stacked boxed rows (1px ink), selected row filled with ink.
+            int ink = y1RowTextColorNormal(rowKind);
+            int stroke = Math.max(1, Math.round(getResources().getDisplayMetrics().density));
+            sel = new com.solar.launcher.july.JulyRowDrawable(ink, ink, stroke);
+            norm = new com.solar.launcher.july.JulyRowDrawable(0, ink, stroke);
+        } else {
+            sel = getY1RowBackground(true, widthPx, rowKind);
+            norm = getY1RowBackground(false, widthPx, rowKind);
+        }
         // Selected chrome first — index hop paints before deferred requestFocus.
         int[][] chrome = Y1RowChromePolicy.selectedChromeStates();
         for (int i = 0; i < chrome.length; i++) {
@@ -11911,6 +11921,7 @@ public class MainActivity extends Activity {
         row.setSelected(focused);
         if (label != null) {
             label.setTypeface(ThemeManager.getCustomFont(), android.graphics.Typeface.BOLD);
+            label.setAllCaps(ThemeManager.isJulyTheme());
             ThemeManager.applyThemedTextStyle(label, focused
                     ? y1RowTextColorSelected(rowKind) : y1RowTextColorNormal(rowKind));
             label.setSelected(focused);
@@ -12252,7 +12263,6 @@ public class MainActivity extends Activity {
         TextView label = (TextView) row.getTag(HOME_MENU_TAG_LABEL);
         ImageView arrow = (ImageView) row.getTag(HOME_MENU_TAG_ARROW);
         label.setText(getString(entry.labelResId));
-        label.setAllCaps(true); // July: uppercase home labels, like the July Radio screens
         row.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -12306,7 +12316,6 @@ public class MainActivity extends Activity {
         TextView label = (TextView) row.getTag(HOME_MENU_TAG_LABEL);
         ImageView arrow = (ImageView) row.getTag(HOME_MENU_TAG_ARROW);
         label.setText(getString(R.string.home_menu_more));
-        label.setAllCaps(true);
         arrow.setVisibility(View.VISIBLE);
         row.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -12351,7 +12360,7 @@ public class MainActivity extends Activity {
         int top = r.getDimensionPixelSize(R.dimen.y1_status_bar_height);
         int inset = Math.round(12 * r.getDisplayMetrics().density);
         View rule = new View(this);
-        rule.setBackgroundColor(0x59FFFFFF);
+        rule.setBackgroundColor((y1RowTextColorNormal(Y1_ROW_HOME) & 0x00FFFFFF) | 0x59000000);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 Math.max(1, Math.round(r.getDisplayMetrics().density)),
                 r.getDimensionPixelSize(R.dimen.y1_menu_height) - 2 * inset);

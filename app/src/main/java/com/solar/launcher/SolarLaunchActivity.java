@@ -126,7 +126,7 @@ public class SolarLaunchActivity extends Activity {
      */
     private FrameLayout buildSplash() {
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(Color.WHITE);
         julySplash = new JulySplashView(this);
         root.addView(julySplash, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));

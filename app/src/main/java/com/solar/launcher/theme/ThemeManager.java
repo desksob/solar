@@ -1063,6 +1063,22 @@ public class ThemeManager {
         }
     }
 
+    /**
+     * 2026-10-23 — July: true for the July / July Dark themes (boxed rows, uppercase labels).
+     * Other themes keep Solar's stock list chrome.
+     */
+    public static boolean isJulyTheme() {
+        try {
+            ThemeEntry t = getCurrentTheme();
+            if (t == null || t.root == null) return false;
+            JSONObject info = t.root.optJSONObject("theme_info");
+            String title = info != null ? info.optString("title", "") : "";
+            return title.trim().regionMatches(true, 0, "July", 0, 4);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Title plus optional theme_info.version, so a restyle under the same name still re-seeds. */
     private static String titleOf(JSONObject root) {
         JSONObject info = root.optJSONObject("theme_info");
