@@ -58443,6 +58443,15 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             iv.clearColorFilter();
         }
     }
+    /** 2026-10-23 — July: leaving radio → drop the radio card, bring the music rows back. */
+    private void hideJulyRadioCard() {
+        View card = findViewById(R.id.july_np_card);
+        if (card == null || card.getVisibility() == View.GONE) return;
+        card.setVisibility(View.GONE);
+        View row = findViewById(R.id.player_content_row);
+        if (row != null) row.setVisibility(View.VISIBLE);
+    }
+
     private void updatePlayerUI() {
         // 2026-07-18 — First NP paint clears track-change status throbber.
         if (com.solar.launcher.ui.UiBusy.isBusy(com.solar.launcher.ui.UiBusy.REASON_TRACK_CHANGE)) {
@@ -58474,6 +58483,7 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
             if (mediaSuite != null) {
                 mediaSuite.stopFmRdsPolling();
             }
+            hideJulyRadioCard();
             if (playback.isPodcastActive() && podcastIjkPlayer != null) {
                 boolean playing = false;
                 try {

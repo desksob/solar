@@ -3413,6 +3413,15 @@ public final class MediaSuiteHost {
         if (albumArt != null && showPause != npBoundPause) {
             albumArt.setAlpha(showPause ? 0.4f : 1.0f);
         }
+        // 2026-10-23 — July: radio shows one art + caption card instead of the music rows.
+        com.solar.launcher.july.JulyNowPlayingCard card = host.findViewById(R.id.july_np_card);
+        if (card != null) {
+            View row = host.findViewById(R.id.player_content_row);
+            if (row != null && row.getVisibility() != View.INVISIBLE) row.setVisibility(View.INVISIBLE);
+            if (card.getVisibility() != View.VISIBLE) card.setVisibility(View.VISIBLE);
+            String cardSub = artistText != null && !artistText.isEmpty() ? artistText : albumText;
+            card.bind(titleText, cardSub, showPause, albumArt);
+        }
         npBoundTitle = titleText != null ? titleText : "";
         npBoundArtist = artistText != null ? artistText : "";
         npBoundAlbum = albumText != null ? albumText : "";

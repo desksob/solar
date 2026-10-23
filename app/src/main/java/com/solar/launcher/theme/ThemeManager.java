@@ -1063,9 +1063,13 @@ public class ThemeManager {
         }
     }
 
+    /** Title plus optional theme_info.version, so a restyle under the same name still re-seeds. */
     private static String titleOf(JSONObject root) {
         JSONObject info = root.optJSONObject("theme_info");
-        return info != null ? info.optString("title", "").trim() : "";
+        if (info == null) return "";
+        String title = info.optString("title", "").trim();
+        String version = info.optString("version", "").trim();
+        return version.isEmpty() ? title : title + "#" + version;
     }
 
     public static void ensureBundledAssetThemes(Context ctx) {

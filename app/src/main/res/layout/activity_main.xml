@@ -726,6 +726,16 @@
                 android:layout_marginTop="6dp" />
         </LinearLayout>
 
+        <!-- 2026-10-23 — July: radio Now Playing card (art + black caption), shown instead of
+             player_content_row while radio plays. -->
+        <com.solar.launcher.july.JulyNowPlayingCard
+            android:id="@+id/july_np_card"
+            android:layout_width="320dp"
+            android:layout_height="236dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="@dimen/y1_status_bar_height"
+            android:visibility="gone" />
+
         <!-- 2026-07-11 — Match transport height to bottom chrome band (times/scrub sit inside). -->
         <!-- 2026-07-20 — 66dp = scrub 34 + tip 32 so hold-Back/Flow tips are not AT_MOST-clipped. -->
         <include
