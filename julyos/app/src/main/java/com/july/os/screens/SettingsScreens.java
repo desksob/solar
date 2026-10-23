@@ -39,9 +39,24 @@ public final class SettingsScreens {
             JulyApp app = JulyApp.get();
             List<Row> r = new ArrayList<Row>();
             r.add(new Row(Icons.WIFI, "Wi-Fi").value(shell.status().wifiLinked ? "Connected" : (shell.status().wifiOn ? "On" : "Off"))
-                    .chevron().on(coming("Wi-Fi")));
-            r.add(new Row(Icons.BLUETOOTH, "Bluetooth").value(shell.status().btOn ? "On" : "Off").chevron().on(coming("Bluetooth")));
-            r.add(new Row(Icons.SUN, "Display").chevron().on(coming("Display")));
+                    .chevron().on(new Runnable() {
+                        @Override
+                        public void run() {
+                            WifiScreens.open(shell);
+                        }
+                    }));
+            r.add(new Row(Icons.BLUETOOTH, "Bluetooth").value(shell.status().btOn ? "On" : "Off").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    BtScreens.open(shell);
+                }
+            }));
+            r.add(new Row(Icons.SUN, "Display").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    shell.push(new DisplayScreen());
+                }
+            }));
             r.add(new Row(Icons.SPEAKER, "Sound").chevron().on(new Runnable() {
                 @Override
                 public void run() {

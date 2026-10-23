@@ -22,7 +22,7 @@ public final class Icons {
             BOOK = 22, CLOCK = 23, SEARCH = 24, DOWNLOAD = 25, GLOBE = 26, REPEAT = 27, POWER = 28,
             SERVER = 29, INFO = 30, WIFI_OFF = 31, WARNING = 32, RESTART = 33, PENCIL = 34,
             RECORDER = 35, CALC = 36, DISPLAY = 37, CLOSE = 38, CHECK = 39, PAUSE = 40, PREV = 41,
-            NEXT = 42, USB = 43, LOCK = 44, BATTERY_LOW = 45;
+            NEXT = 42, USB = 43, LOCK = 44, BATTERY_LOW = 45, HEADPHONES = 46, TRASH = 47;
 
     private Icons() {}
 
@@ -330,6 +330,16 @@ public final class Icons {
             case LOCK:
                 p.addRect(5, 11, 19, 21, Path.Direction.CW);
                 p.moveTo(8, 11); p.lineTo(8, 7); p.quadTo(8, 3, 12, 3); p.quadTo(16, 3, 16, 7); p.lineTo(16, 11);
+                break;
+            case HEADPHONES:
+                p.moveTo(4, 15); p.lineTo(4, 12); p.addArc(new RectF(4, 4, 20, 20), 180, 180); p.moveTo(20, 12); p.lineTo(20, 15);
+                p.addRect(4, 15, 7, 20, Path.Direction.CW);
+                p.addRect(17, 15, 20, 20, Path.Direction.CW);
+                break;
+            case TRASH:
+                p.moveTo(4, 7); p.lineTo(20, 7);
+                p.moveTo(9, 7); p.lineTo(9, 4); p.lineTo(15, 4); p.lineTo(15, 7);
+                p.moveTo(6, 7); p.lineTo(7, 21); p.lineTo(17, 21); p.lineTo(18, 7);
                 break;
             case BATTERY_LOW:
                 p.addRect(2, 7, 19, 17, Path.Direction.CW);

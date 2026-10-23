@@ -399,6 +399,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     };
 
     private void refreshRadios() {
+        status.clock = JulyApp.get().prefs().getBoolean("clock", false);
         try {
             WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
             status.wifiOn = wm != null && wm.isWifiEnabled();

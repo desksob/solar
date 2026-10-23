@@ -25,6 +25,11 @@ public final class Debug {
         if ("theme".equals(name)) return new SettingsScreens.Theme();
         if ("sound".equals(name)) return new SettingsScreens.Sound();
         if ("about".equals(name)) return new SettingsScreens.About();
+        if ("wifi".equals(name)) return new WifiScreens.List_();
+        if ("wifipw".equals(name)) return new WifiScreens.Password("Kilimani_Home", "[WPA2-PSK-CCMP]");
+        if ("bt".equals(name)) return new BtScreens.List_();
+        if ("btscan".equals(name)) return new BtScreens.Scan();
+        if ("display".equals(name)) return new DisplayScreen();
         return null;
     }
 }

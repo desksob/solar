@@ -21,7 +21,7 @@ public final class Frame {
 
     /** Live device status for the header. */
     public static final class Status {
-        public boolean wifiOn, wifiLinked, btOn, charging;
+        public boolean wifiOn, wifiLinked, btOn, charging, clock;
         public int battery = -1;
     }
 
@@ -80,6 +80,10 @@ public final class Frame {
             x -= 26f;
         }
         d.icon(c, s.wifiOn && s.wifiLinked ? Icons.WIFI : Icons.WIFI_OFF, x - 16f, cy - 8f, 16f, d.ink);
+        if (s.clock) {
+            String t = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date());
+            d.right(c, t, x - 16f - 14f, cy + 4f, d.semi, 12f, d.ink, Draw.em(12f, 0.04f));
+        }
         d.fill(c, 0, HEADER - 1f, Draw.W, HEADER, d.ink);
     }
 
