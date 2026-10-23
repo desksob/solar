@@ -1,0 +1,4 @@
+// July OS — a new firmware UI for the Innioasis Y1, built from the July design (not Solar).
+plugins {
+    id 'com.android.application' version '8.6.1' apply false
+}
