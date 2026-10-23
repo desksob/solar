@@ -39,6 +39,7 @@ public final class JulyPlayer {
     private static boolean triedHttp;
     private static PowerManager.WakeLock wakeLock;
     private static long startedAt;
+    private static long playingSince;
 
     private JulyPlayer() {}
 
@@ -48,6 +49,11 @@ public final class JulyPlayer {
 
     public static synchronized void setListener(Listener l) {
         listener = l;
+    }
+
+    /** When the current stream started playing (ms), or 0 when not playing. */
+    public static long playingSince() {
+        return state == PLAYING ? playingSince : 0L;
     }
 
     public static boolean isActive() {
@@ -110,6 +116,7 @@ public final class JulyPlayer {
                         try {
                             m.start();
                             SolarLog.i(TAG, "playing after " + (System.currentTimeMillis() - startedAt) + "ms");
+                            playingSince = System.currentTimeMillis();
                             setState(PLAYING);
                         } catch (Exception e) {
                             fail(app, "start failed", e);

@@ -6,8 +6,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.view.KeyEvent;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.solar.launcher.ConnectivityHelper;
@@ -33,6 +35,7 @@ public class JulyActivity extends Activity
     private static final int FAV_VISIBLE = 4;
 
     private JulyView view;
+    private JulyChromeView chrome;
     private JulyFavorites favorites;
     private final Handler handler = new Handler();
     private final List<Integer> stack = new ArrayList<Integer>();
@@ -55,7 +58,14 @@ public class JulyActivity extends Activity
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         favorites = new JulyFavorites(this);
         view = new JulyView(this);
-        setContentView(view);
+        chrome = new JulyChromeView(this);
+        // Design frame (logo bar, section strip, hints) over the July body — same as the rest of Solar.
+        FrameLayout root = new FrameLayout(this);
+        root.addView(view, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(chrome, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(root);
         view.now = JulyRadio.latest();
         view.playerState = JulyPlayer.state();
         refreshFavs();
@@ -72,6 +82,8 @@ public class JulyActivity extends Activity
         JulyPlayer.setListener(this);
         view.playerState = JulyPlayer.state();
         JulyRadio.startPolling(this);
+        handler.removeCallbacks(clockTick);
+        handler.post(clockTick);
         if (view.screen == JulyView.S_OFFLINE && ConnectivityHelper.isOnline(this)) {
             openScreen(JulyView.S_HOME, false);
         }
@@ -84,6 +96,7 @@ public class JulyActivity extends Activity
         JulyPlayer.setListener(null);
         JulyRadio.stopPolling();
         handler.removeCallbacks(clearFlash);
+        handler.removeCallbacks(clockTick);
     }
 
     // ---- data callbacks ----
@@ -102,11 +115,102 @@ public class JulyActivity extends Activity
 
     private void syncState() {
         JulyRadio.Now n = view.now;
-        view.setDark(n != null && n.isDjSet());
+        boolean djScreen = view.screen == JulyView.S_LIVE && n != null && n.isDjSet();
+        view.setDark(djScreen || com.solar.launcher.theme.ThemeManager.isJulyDarkTheme());
         view.currentSaved = n != null && !n.isDjSet() && n.title.length() > 0
                 && favorites.isSaved(n.title, n.artist);
+        updateChrome();
         view.invalidate();
     }
+
+    private static final String[] DAYS = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+    /** Section strip + hints per July Radio screen (design B1–B7), plus wifi / bt / battery. */
+    private void updateChrome() {
+        if (chrome == null) return;
+        chrome.setDark(view.dark);
+        chrome.setNext(null, 0);
+        chrome.setScroll(0f, 1f);
+        JulyRadio.Now n = view.now;
+        int st = view.playerState;
+        switch (view.screen) {
+            case JulyView.S_LIVE:
+                if (st == JulyPlayer.ERROR) {
+                    chrome.setSectionRaw("July Radio", "");
+                    chrome.setHints(new String[][]{{"Center", "Retry"}, {"Menu", "Back"}});
+                } else if (n != null && n.isDjSet()) {
+                    chrome.setSectionRaw("July Radio · DJ set", "Live");
+                    chrome.setHints(new String[][]{{"Center", playing(st) ? "Pause" : "Play"}, {"Menu", "Back"}});
+                } else {
+                    chrome.setSectionRaw("July Radio · Live", elapsed());
+                    chrome.setHints(new String[][]{{"Center", playing(st) ? "Pause" : "Play"},
+                            {"Hold", "Save song"}, {"Left", "Schedule"}});
+                }
+                break;
+            case JulyView.S_SCHEDULE:
+                chrome.setSectionRaw("Schedule · Today",
+                        DAYS[java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) - 1]);
+                chrome.setHints(new String[][]{{"Wheel", "Day"}, {"Menu", "Back"}});
+                break;
+            case JulyView.S_FAVS:
+                chrome.setSectionRaw("Favourites", view.favs.size() + " saved");
+                chrome.setHints(new String[][]{{"Center", "Info"}, {"Hold", "Remove"}, {"Menu", "Back"}});
+                break;
+            default:
+                chrome.setSectionRaw("July Radio", "");
+                chrome.setHints(new String[][]{{"Wheel", "Move"}, {"Center", "Select"}, {"Menu", "Back"}});
+                break;
+        }
+        boolean wifiOn = false, wifiLinked = false, btOn = false;
+        int battery = -1;
+        boolean charging = false;
+        try {
+            android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager)
+                    getApplicationContext().getSystemService(WIFI_SERVICE);
+            wifiOn = wm != null && wm.isWifiEnabled();
+            wifiLinked = wifiOn && ConnectivityHelper.isOnline(this);
+        } catch (Exception ignored) {
+        }
+        try {
+            android.bluetooth.BluetoothAdapter ba = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            btOn = ba != null && ba.isEnabled();
+        } catch (Exception ignored) {
+        }
+        try {
+            Intent b = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (b != null) {
+                int lvl = b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+                int scale = b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+                battery = scale > 0 && lvl >= 0 ? Math.round(lvl * 100f / scale) : -1;
+                int bs = b.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+                charging = bs == android.os.BatteryManager.BATTERY_STATUS_CHARGING
+                        || bs == android.os.BatteryManager.BATTERY_STATUS_FULL;
+            }
+        } catch (Exception ignored) {
+        }
+        chrome.setStatus(wifiOn, wifiLinked, btOn, battery, charging);
+    }
+
+    private static boolean playing(int st) {
+        return st == JulyPlayer.PLAYING || st == JulyPlayer.CONNECTING;
+    }
+
+    /** Listening time on the live strip, "00:12:41". */
+    private static String elapsed() {
+        long since = JulyPlayer.playingSince();
+        if (since <= 0) return "";
+        long sec = Math.max(0L, (System.currentTimeMillis() - since) / 1000L);
+        return String.format(java.util.Locale.US, "%02d:%02d:%02d", sec / 3600, (sec / 60) % 60, sec % 60);
+    }
+
+    /** Ticks the live strip's clock once a second while the live screen is open. */
+    private final Runnable clockTick = new Runnable() {
+        @Override
+        public void run() {
+            if (view.screen == JulyView.S_LIVE) updateChrome();
+            handler.postDelayed(this, 1000L);
+        }
+    };
 
     private void refreshFavs() {
         view.favs = favorites.list();
@@ -197,10 +301,7 @@ public class JulyActivity extends Activity
     private void move(int delta) {
         switch (view.screen) {
             case JulyView.S_HOME:
-                view.selected = Math.max(0, Math.min(2, view.selected + delta));
-                break;
-            case JulyView.S_OFFLINE:
-                view.selected = Math.max(0, Math.min(1, view.selected + delta));
+                view.selected = Math.max(0, Math.min(JulyView.HOME_ROWS - 1, view.selected + delta));
                 break;
             case JulyView.S_FAVS:
                 if (view.favs.isEmpty()) break;
@@ -219,14 +320,14 @@ public class JulyActivity extends Activity
             case JulyView.S_HOME:
                 if (view.selected == 0) listenLive();
                 else if (view.selected == 1) openScreen(JulyView.S_SCHEDULE, true);
-                else openScreen(JulyView.S_FAVS, true);
+                else if (view.selected == 2) openScreen(JulyView.S_FAVS, true);
+                else openWifiSettings(); // Radio settings: connection is the only radio setting today
                 break;
             case JulyView.S_LIVE:
                 togglePlay();
                 break;
             case JulyView.S_OFFLINE:
-                if (view.selected == 0) openWifiSettings();
-                else goBack();
+                openWifiSettings(); // B5 has one button
                 break;
             default:
                 break;
