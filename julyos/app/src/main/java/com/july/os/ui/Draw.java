@@ -202,6 +202,27 @@ public final class Draw {
         return w;
     }
 
+    /** The design's placeholder fill: 1px diagonal hairlines every 10px (135deg stripes). */
+    public void hatch(Canvas c, float l, float t, float r, float b, int color) {
+        c.save();
+        c.clipRect(l, t, r, b);
+        p.setColor(color);
+        p.setStrokeWidth(1f);
+        float h = b - t;
+        for (float x = l - h; x < r; x += 10f * 1.41421f) c.drawLine(x, b, x + h, t, p);
+        c.restore();
+    }
+
+    /** Filled pill at an explicit size (TV "ON AIR" 11px semibold, D11 "LIVE" 9px). Returns its width. */
+    public float solidPill(Canvas c, String label, float l, float cy, float size, int fillColor, int textColor) {
+        String s = up(label);
+        float tr = em(size, 0.06f);
+        float w = width(s, semi, size, tr) + 20f, h = size + 6f;
+        fill(c, l, cy - h / 2f, l + w, cy + h / 2f, fillColor);
+        text(c, s, l + 10f, cy + size * 0.36f, semi, size, textColor, tr);
+        return w;
+    }
+
     /** Black tag with light text in a corner of artwork ("PAUSED", "CONNECTING"). */
     public void tag(Canvas c, String label, float l, float t) {
         String s = up(label);

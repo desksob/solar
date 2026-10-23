@@ -23,6 +23,7 @@ public class ListScreen extends Screen {
         public String sub = "";     // library second line
         public String value = "";   // right-side muted text (boxed) / right text (library)
         public String pill;         // outlined pill on the right (boxed), e.g. LIVE
+        public boolean pillOn;      // filled pill (D9 "ON")
         public boolean chevron;     // ›
         public String lead;         // library lead column, e.g. NOW / NEXT / 2
         public boolean leadStrong;  // "NOW" row drawn as the current item
@@ -157,7 +158,7 @@ public class ListScreen extends Screen {
         // right side first so the label can be fitted to what's left
         float used = 0f;
         if (r.pill != null) {
-            used = d.pill(c, r.pill, right, y + rowH / 2f, sel ? d.bg : d.ink, false, 0);
+            used = d.pill(c, r.pill, right, y + rowH / 2f, sel ? d.bg : d.ink, r.pillOn, sel ? d.ink : d.bg);
         } else {
             float vx = right;
             if (r.chevron) {

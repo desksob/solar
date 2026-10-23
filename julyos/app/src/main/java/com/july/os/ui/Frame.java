@@ -63,8 +63,18 @@ public final class Frame {
             c.drawBitmap(logo, null, rf, d.p);
             d.p.setColorFilter(null);
         }
-        // Right cluster, right to left: battery %, battery glyph (gap 5), bluetooth, wifi (gap 10).
-        float x = Draw.W - 16f, cy = HEADER / 2f;
+        float x = statusCluster(c, d, s, Draw.W - 16f, HEADER / 2f), cy = HEADER / 2f;
+        if (s.clock) {
+            String t = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date());
+            d.right(c, t, x - 14f, cy + 4f, d.semi, 12f, d.ink, Draw.em(12f, 0.04f));
+        }
+        d.fill(c, 0, HEADER - 1f, Draw.W, HEADER, d.ink);
+    }
+
+    /** Wifi, bluetooth, battery glyph + % ending at {@code right}; returns the cluster's left edge. */
+    public float statusCluster(Canvas c, Draw d, Status s, float right, float cy) {
+        // Right to left: battery %, battery glyph (gap 5), bluetooth, wifi (gap 10).
+        float x = right;
         if (s.battery >= 0) {
             String pct = s.battery + "%";
             x -= d.right(c, pct, x, cy + 3.6f, d.med, 10f, d.ink, 0.4f);
@@ -80,11 +90,7 @@ public final class Frame {
             x -= 26f;
         }
         d.icon(c, s.wifiOn && s.wifiLinked ? Icons.WIFI : Icons.WIFI_OFF, x - 16f, cy - 8f, 16f, d.ink);
-        if (s.clock) {
-            String t = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date());
-            d.right(c, t, x - 16f - 14f, cy + 4f, d.semi, 12f, d.ink, Draw.em(12f, 0.04f));
-        }
-        d.fill(c, 0, HEADER - 1f, Draw.W, HEADER, d.ink);
+        return x - 16f;
     }
 
     /** Ink bar: title left, optional text right (10px, 0.16em, uppercase). */

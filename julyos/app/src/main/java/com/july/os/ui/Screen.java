@@ -40,6 +40,11 @@ public abstract class Screen {
         return false;
     }
 
+    /** Video plays under this screen: the Shell clears the canvas instead of filling it. */
+    public boolean videoBehind() {
+        return false;
+    }
+
     /** Force the dark palette for this board (B6 DJ set) regardless of the user's theme. */
     public boolean forceDark() {
         return false;

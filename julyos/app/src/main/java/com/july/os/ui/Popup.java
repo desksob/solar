@@ -159,10 +159,17 @@ public abstract class Popup {
         private final String title;
         private final List<Item> items;
         private int sel;
+        private float rowH = 36f;
 
         public Menu(String title, List<Item> items) {
             this.title = title;
             this.items = items;
+        }
+
+        /** D5 video options use 34px rows. */
+        public Menu rowHeight(float h) {
+            rowH = h;
+            return this;
         }
 
         @Override
@@ -183,7 +190,7 @@ public abstract class Popup {
         @Override
         public void draw(Canvas c, Draw d) {
             scrim(c, d);
-            float w = 260f, rowH = 36f, l = (Draw.W - w) / 2f;
+            float w = 260f, l = (Draw.W - w) / 2f;
             boolean hasTitle = title != null && title.length() > 0;
             float h = (hasTitle ? 30f : 0f) + items.size() * (rowH - 1f) + 1f + 4f;
             float t = (Draw.H - h) / 2f;

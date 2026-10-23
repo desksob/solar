@@ -30,6 +30,15 @@ public final class Debug {
         if ("bt".equals(name)) return new BtScreens.List_();
         if ("btscan".equals(name)) return new BtScreens.Scan();
         if ("display".equals(name)) return new DisplayScreen();
+        if ("tv".equals(name)) return new TvScreens.Home();
+        if ("tvwatch".equals(name)) return new TvScreens.Watch();
+        if ("tvguide".equals(name)) return new TvScreens.Guide();
+        if ("tvoffline".equals(name)) return new TvScreens.Offline();
+        if ("videos".equals(name)) return new VideoScreens.Menu();
+        if ("videolist".equals(name)) return new VideoScreens.VideoList("Videos", com.july.os.media.Gallery.get().videos());
+        if ("photos".equals(name)) return new PhotoScreens.Menu();
+        if ("photogrid".equals(name)) return new PhotoScreens.Grid("All photos", com.july.os.media.Gallery.get().photos());
+        if ("slideshow".equals(name)) return new PhotoScreens.Slideshow(com.july.os.media.Gallery.get().photos());
         return null;
     }
 }

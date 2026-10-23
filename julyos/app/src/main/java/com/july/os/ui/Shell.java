@@ -12,6 +12,7 @@ import android.graphics.Camera;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.net.ConnectivityManager;
@@ -24,6 +25,7 @@ import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 
 import com.july.os.JulyApp;
 import com.july.os.media.Library;
@@ -48,6 +50,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     private Frame frame;
     private final Frame.Status status = new Frame.Status();
     private View view;
+    private VideoLayer video;
 
     // boot (A1)
     private boolean booting = true;
@@ -112,14 +115,20 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
                 paint(c);
             }
         };
-        view.setBackgroundColor(0xFFFFFFFF);
-        setContentView(view);
+        getWindow().setFormat(PixelFormat.TRANSLUCENT); // lets the video surface show through
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF000000);
+        video = new VideoLayer(this, root);
+        root.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
         bootAt = SystemClock.uptimeMillis();
         debugKeys = getIntent() != null && getIntent().getBooleanExtra("debugKeys", false);
         if (getIntent() != null && getIntent().getStringExtra("open") != null) openFromIntent(getIntent());
         push(new HomeScreen());
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
+        com.july.os.media.Gallery.get().scan(null); // videos & photos ready before anyone opens them
         IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         sf.addAction(Intent.ACTION_SCREEN_ON);
         registerReceiver(screen, sf);
@@ -140,6 +149,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             redraw();
             return;
         }
+        if (i != null && i.getStringExtra("tvurl") != null) com.july.os.tv.JulyTv.override = i.getStringExtra("tvurl");
         String what = i != null ? i.getStringExtra("open") : null;
         if (what == null) {
             // Home button while July is already running (direct, or forwarded by Solar's home
@@ -278,9 +288,24 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         return status;
     }
 
+    public Frame frame() {
+        return frame;
+    }
+
+    /** The video surface under the UI (D3, D11). */
+    public VideoLayer video() {
+        return video;
+    }
+
     // ---- drawing ----
 
     private void paint(Canvas c) {
+        Screen top0 = top();
+        if (!booting && !locked && top0 != null && top0.videoBehind()) {
+            c.drawColor(0, PorterDuff.Mode.CLEAR); // the video shows wherever the screen doesn't draw
+        } else {
+            c.drawColor(JulyApp.get().darkTheme() ? 0xFF0A0A0A : 0xFFFFFFFF);
+        }
         float s = Math.min(c.getWidth() / Draw.W, c.getHeight() / Draw.H);
         c.save();
         c.translate((c.getWidth() - Draw.W * s) / 2f, (c.getHeight() - Draw.H * s) / 2f);
@@ -517,7 +542,8 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             return;
         }
         if (popup != null && popup.modal()) {
-            if (!popup.onKey(k)) popup = null;
+            Popup p = popup;
+            if (!p.onKey(k) && popup == p) popup = null; // an item may open the next pop-up
             redraw();
             return;
         }

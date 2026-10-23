@@ -49,9 +49,24 @@ public final class HomeScreen extends ListScreen {
                 shell.push(new RadioScreens.Menu());
             }
         }));
-        r.add(new Row(Icons.TV, "July TV").chevron().on(coming("July TV")));
-        r.add(new Row(Icons.FOLDER, "Videos").chevron().on(coming("Videos")));
-        r.add(new Row(Icons.PHOTO, "Photos").chevron().on(coming("Photos")));
+        r.add(new Row(Icons.TV, "July TV").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                TvScreens.open(shell);
+            }
+        }));
+        r.add(new Row(Icons.FOLDER, "Videos").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new VideoScreens.Menu());
+            }
+        }));
+        r.add(new Row(Icons.PHOTO, "Photos").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new PhotoScreens.Menu());
+            }
+        }));
         r.add(new Row(Icons.MIC, "Podcasts").chevron().on(coming("Podcasts")));
         r.add(new Row(Icons.BOOK, "Audiobooks").chevron().on(coming("Audiobooks")));
         r.add(new Row(Icons.RADIO, "FM Radio").chevron().on(coming("FM Radio")));
