@@ -10,6 +10,7 @@ permissions:
   contents: write
 
 env:
+  SOLAR_GITHUB_PAT: ${{ secrets.SOLAR_GITHUB_PAT }}
   SOLAR_GITHUB_REPO: thesolarproject/solar
   SOLAR_Y1A_BASE_ZIP: ${{ vars.SOLAR_Y1A_BASE_ZIP }}
   SOLAR_Y1B_BASE_ZIP: ${{ vars.SOLAR_Y1B_BASE_ZIP }}
@@ -46,6 +47,7 @@ jobs:
           ./solar-rom/scripts/prepare-release.sh
 
       - name: Verify OTA PAT can push to solar-update
+        if: ${{ env.SOLAR_GITHUB_PAT != '' }}
         env:
           SOLAR_GITHUB_PAT: ${{ secrets.SOLAR_GITHUB_PAT }}
         run: |
@@ -201,6 +203,7 @@ jobs:
           generate_release_notes: false
 
       - name: Publish OTA catalog
+        if: ${{ env.SOLAR_GITHUB_PAT != '' }}
         env:
           SOLAR_GITHUB_PAT: ${{ secrets.SOLAR_GITHUB_PAT }}
         run: |
