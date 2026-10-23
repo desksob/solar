@@ -36,6 +36,9 @@ public final class Player {
     private final Set<String> hearts;
 
     private MediaPlayer mp;
+    /** Gapless (H15): the next track, prepared and chained with setNextMediaPlayer. */
+    private MediaPlayer nextMp;
+    private int nextPos = -1;
     private List<Track> queue = new ArrayList<Track>();
     private List<Integer> order = new ArrayList<Integer>(); // play order over queue indexes
     private int pos = -1;                                   // position in order
@@ -65,6 +68,7 @@ public final class Player {
     }
 
     private void changed() {
+        saveSoon();
         main.post(new Runnable() {
             @Override
             public void run() {
@@ -160,6 +164,7 @@ public final class Player {
         }
         queue.add(t);
         order.add(pos + 1, queue.size() - 1);
+        chainNext();
         changed();
     }
 
@@ -170,6 +175,7 @@ public final class Player {
         }
         queue.add(t);
         order.add(queue.size() - 1);
+        chainNext();
         changed();
     }
 
@@ -178,6 +184,7 @@ public final class Player {
         int i = pos + offset;
         if (offset <= 0 || i >= order.size()) return;
         order.remove(i);
+        chainNext();
         changed();
     }
 
@@ -246,6 +253,7 @@ public final class Player {
         shuffle = on;
         prefs.edit().putBoolean("shuffle", on).apply();
         if (hasQueue()) pos = buildOrder(order.get(pos));
+        chainNext();
         changed();
     }
 
@@ -256,6 +264,7 @@ public final class Player {
     public void setRepeat(int r) {
         repeat = r;
         prefs.edit().putInt("repeat", r).apply();
+        chainNext();
         changed();
     }
 
@@ -283,57 +292,187 @@ public final class Player {
     }
 
     private void startCurrent() {
+        startCurrent(0, true);
+    }
+
+    private void startCurrent(int atMs, boolean play) {
         final Track t = current();
         if (t == null) return;
-        if (onTakeover != null) onTakeover.run();
+        if (play && onTakeover != null) onTakeover.run();
         release();
         prepared = false;
         try {
-            MediaPlayer m = new MediaPlayer();
+            MediaPlayer m = newPlayer(t);
             mp = m;
-            m.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            m.setWakeMode(app, PowerManager.PARTIAL_WAKE_LOCK);
-            m.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer x) {
-                    if (x != mp) return;
-                    if (repeat == REPEAT_ONE) {
-                        seek(0);
-                        resume();
-                    } else {
-                        skipNext();
-                    }
-                }
-            });
-            m.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                @Override
-                public boolean onError(MediaPlayer x, int what, int extra) {
-                    if (x == mp) {
-                        playing = false;
-                        prepared = false;
-                        changed();
-                    }
-                    return true;
-                }
-            });
-            m.setDataSource(t.path);
-            m.prepare(); // local files: synchronous prepare is fast and keeps state simple
             prepared = true;
-            requestFocus();
-            m.start();
-            playing = true;
-            PlayerService.keepAlive(app, true);
+            if (atMs > 0) m.seekTo(atMs);
+            if (play) {
+                requestFocus();
+                m.start();
+                playing = true;
+                PlayerService.keepAlive(app, true);
+            } else {
+                playing = false;
+            }
+            chainNext();
         } catch (Exception e) {
             playing = false;
+            error = play;
         }
         changed();
     }
 
+    private boolean error;
+
+    /** True once after a file failed to play (I11). */
+    public boolean takeError() {
+        boolean e = error;
+        error = false;
+        return e;
+    }
+
+    /** A prepared MediaPlayer for {@code t} with July's completion/error handling. */
+    private MediaPlayer newPlayer(Track t) throws Exception {
+        MediaPlayer m = new MediaPlayer();
+        m.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        m.setWakeMode(app, PowerManager.PARTIAL_WAKE_LOCK);
+        m.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer x) {
+                if (x != mp) return;
+                if (repeat == REPEAT_ONE) {
+                    seek(0);
+                    resume();
+                } else if (nextMp != null && nextPos >= 0) {
+                    // Gapless: the chained player is already running.
+                    MediaPlayer old = mp;
+                    mp = nextMp;
+                    pos = nextPos;
+                    nextMp = null;
+                    nextPos = -1;
+                    prepared = true;
+                    playing = true;
+                    try { old.release(); } catch (Exception ignored) { }
+                    chainNext();
+                    changed();
+                } else {
+                    skipNext();
+                }
+            }
+        });
+        m.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer x, int what, int extra) {
+                if (x == mp) {
+                    playing = false;
+                    prepared = false;
+                    error = true;
+                    changed();
+                }
+                return true;
+            }
+        });
+        m.setDataSource(t.path);
+        m.prepare(); // local files: synchronous prepare is fast and keeps state simple
+        return m;
+    }
+
+    public boolean gapless() {
+        return prefs.getBoolean("gapless", true);
+    }
+
+    public void setGapless(boolean on) {
+        prefs.edit().putBoolean("gapless", on).apply();
+        chainNext();
+        changed();
+    }
+
+    /** (Re)prepare the following track and chain it for a seamless change (API 16+). */
+    private void chainNext() {
+        dropNext();
+        if (mp == null || !prepared || !gapless() || repeat == REPEAT_ONE || !hasQueue()) return;
+        int np = pos + 1 < order.size() ? pos + 1 : (repeat == REPEAT_ALL ? 0 : -1);
+        if (np < 0 || np == pos) return;
+        try {
+            MediaPlayer n = newPlayer(queue.get(order.get(np)));
+            mp.setNextMediaPlayer(n);
+            nextMp = n;
+            nextPos = np;
+        } catch (Exception e) {
+            dropNext();
+        }
+    }
+
+    private void dropNext() {
+        if (nextMp != null) {
+            try { if (mp != null) mp.setNextMediaPlayer(null); } catch (Exception ignored) { }
+            try { nextMp.release(); } catch (Exception ignored) { }
+        }
+        nextMp = null;
+        nextPos = -1;
+    }
+
     private void release() {
+        dropNext();
         if (mp != null) {
             try { mp.release(); } catch (Exception ignored) { }
             mp = null;
         }
+    }
+
+    // ---- resume on start (H15) ----
+
+    private final Runnable saver = new Runnable() {
+        @Override
+        public void run() {
+            saveState();
+        }
+    };
+
+    private void saveSoon() {
+        main.removeCallbacks(saver);
+        main.postDelayed(saver, 1500);
+    }
+
+    /** Remember the queue and place so July can pick up after a restart. */
+    public void saveState() {
+        if (!hasQueue()) return;
+        StringBuilder q = new StringBuilder();
+        int from = Math.max(0, pos - 200), to = Math.min(order.size(), pos + 800);
+        for (int i = from; i < to; i++) q.append(queue.get(order.get(i)).path).append('\n');
+        prefs.edit().putString("resume_q", q.toString()).putInt("resume_pos", pos - from)
+                .putLong("resume_ms", positionMs()).apply();
+    }
+
+    public boolean resumeOnStart() {
+        return prefs.getBoolean("resume_on_start", true);
+    }
+
+    public void setResumeOnStart(boolean on) {
+        prefs.edit().putBoolean("resume_on_start", on).apply();
+    }
+
+    /** After the library loads: rebuild the last queue, paused where it stopped. */
+    public void restoreState(java.util.Map<String, Track> byPath) {
+        if (hasQueue() || !resumeOnStart()) return;
+        String q = prefs.getString("resume_q", null);
+        if (q == null || q.length() == 0) return;
+        List<Track> list = new ArrayList<Track>();
+        int want = prefs.getInt("resume_pos", 0), at = 0;
+        String[] paths = q.split("\n");
+        for (int i = 0; i < paths.length; i++) {
+            Track t = byPath.get(paths[i]);
+            if (t == null) continue;
+            if (i == want) at = list.size();
+            list.add(t);
+        }
+        if (list.isEmpty()) return;
+        boolean sh = shuffle;
+        shuffle = false; // keep the saved order as it was
+        queue = list;
+        pos = buildOrder(at);
+        shuffle = sh;
+        startCurrent((int) prefs.getLong("resume_ms", 0), false);
     }
 
     private final AudioManager.OnAudioFocusChangeListener focus = new AudioManager.OnAudioFocusChangeListener() {
@@ -368,8 +507,25 @@ public final class Player {
     public void stepVolume(int delta) {
         AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
         if (am == null) return;
-        int v = Math.max(0, Math.min(volumeMax(), volume() + delta));
+        int v = Math.max(0, Math.min(volumeCap(), volume() + delta));
         am.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0);
+    }
+
+    /** H13 volume limit (percent of max). */
+    public int volumeLimit() {
+        return prefs.getInt("vol_limit", 100);
+    }
+
+    public void setVolumeLimit(int pct) {
+        prefs.edit().putInt("vol_limit", Math.max(30, Math.min(100, pct))).apply();
+        if (volume() > volumeCap()) {
+            AudioManager am = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) am.setStreamVolume(AudioManager.STREAM_MUSIC, volumeCap(), 0);
+        }
+    }
+
+    public int volumeCap() {
+        return Math.max(1, Math.round(volumeMax() * volumeLimit() / 100f));
     }
 
     static Intent serviceIntent(Context c) {

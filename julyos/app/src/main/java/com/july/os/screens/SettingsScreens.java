@@ -60,42 +60,46 @@ public final class SettingsScreens {
             r.add(new Row(Icons.SPEAKER, "Sound").chevron().on(new Runnable() {
                 @Override
                 public void run() {
-                    shell.push(new Sound());
+                    shell.push(new SettingsMore.Sound());
                 }
             }));
             r.add(new Row(Icons.PLAY, "Playback").chevron().on(new Runnable() {
                 @Override
                 public void run() {
-                    shell.push(new Playback());
+                    shell.push(new SettingsMore.Playback());
                 }
             }));
-            r.add(new Row(Icons.LIST, "Home menu").chevron().on(coming("Home menu")));
+            r.add(new Row(Icons.LIST, "Home menu").chevron().on(open(SettingsMore.HomeMenu.class)));
             r.add(new Row(Icons.SUN, "Theme").value(app.darkTheme() ? "Dark" : "Light").chevron().on(new Runnable() {
                 @Override
                 public void run() {
                     shell.push(new Theme());
                 }
             }));
-            r.add(new Row(Icons.DISC, "Storage").value(freeSpace()).chevron().on(coming("Storage")));
-            r.add(new Row(Icons.CLOCK, "Date & time").chevron().on(coming("Date & time")));
-            r.add(new Row(Icons.GLOBE, "Language").value("English").chevron().on(coming("Language")));
-            r.add(new Row(Icons.CLOCK, "Sleep timer").value("Off").chevron().on(coming("Sleep timer")));
-            r.add(new Row(Icons.DOWNLOAD, "Updates").chevron().on(coming("Updates")));
+            r.add(new Row(Icons.DISC, "Storage").value(freeSpace()).chevron().on(open(SettingsMore.Storage.class)));
+            r.add(new Row(Icons.CLOCK, "Date & time").chevron().on(open(SettingsMore.DateTime.class)));
+            r.add(new Row(Icons.GLOBE, "Language").value("English").chevron().on(open(SettingsMore.Language.class)));
+            r.add(new Row(Icons.CLOCK, "Sleep timer").value(com.july.os.system.SleepTimer.label()).chevron().on(open(SettingsMore.Sleep.class)));
+            r.add(new Row(Icons.DOWNLOAD, "Updates").chevron().on(open(SettingsMore.Updates.class)));
             r.add(new Row(Icons.INFO, "About").chevron().on(new Runnable() {
                 @Override
                 public void run() {
                     shell.push(new About());
                 }
             }));
-            r.add(new Row(Icons.USB, "USB connection").chevron().on(coming("USB connection")));
+            r.add(new Row(Icons.USB, "USB connection").chevron().on(open(SettingsMore.Usb.class)));
             setRows(r);
         }
 
-        private Runnable coming(final String name) {
+        private Runnable open(final Class<? extends Screen> cls) {
             return new Runnable() {
                 @Override
                 public void run() {
-                    shell.push(new ComingScreen(name));
+                    try {
+                        shell.push(cls.newInstance());
+                    } catch (Exception e) {
+                        shell.toast(Icons.WARNING, "Couldn't open that");
+                    }
                 }
             };
         }
@@ -109,43 +113,6 @@ public final class SettingsScreens {
             return String.format(java.util.Locale.US, "%.1f GB free", free / 1e9);
         } catch (Exception e) {
             return "";
-        }
-    }
-
-    // ---- C15 / H15 · Playback ----
-
-    public static final class Playback extends ListScreen {
-        public Playback() {
-            super("Playback", BOXED, 38f);
-            showCount = false;
-            nextStrip = false;
-        }
-
-        @Override
-        public void onShow() {
-            final Player p = JulyApp.get().player();
-            List<Row> r = new ArrayList<Row>();
-            r.add(toggle("Shuffle", p.isShuffle(), new Runnable() {
-                @Override
-                public void run() {
-                    p.setShuffle(!p.isShuffle());
-                    onShow();
-                }
-            }));
-            r.add(new Row(0, "Repeat").value(new String[]{"Off", "All", "One"}[p.repeatMode()]).on(new Runnable() {
-                @Override
-                public void run() {
-                    p.cycleRepeat();
-                    onShow();
-                }
-            }));
-            setRows(r);
-        }
-
-        private Row toggle(String label, boolean on, Runnable r) {
-            Row row = new Row(0, label).on(r);
-            row.pill = on ? "On" : "Off";
-            return row;
         }
     }
 
@@ -178,43 +145,6 @@ public final class SettingsScreens {
             }));
             selected = app.darkTheme() ? 1 : 0;
             setRows(r);
-        }
-    }
-
-    // ---- H13 · Sound ----
-
-    public static final class Sound extends Screen {
-        @Override
-        public String title() {
-            return "Sound";
-        }
-
-        @Override
-        public String[][] hints() {
-            return new String[][]{{"Wheel", "Volume"}, {"Menu", "Back"}};
-        }
-
-        @Override
-        public boolean onKey(Key k) {
-            if (k == Key.UP || k == Key.DOWN) {
-                JulyApp.get().player().stepVolume(k == Key.UP ? 1 : -1);
-                redraw();
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public void drawBody(Canvas c, Draw d, float top, float bottom) {
-            Player p = JulyApp.get().player();
-            float y = top + Frame.PAD_T;
-            d.text(c, "VOLUME", Frame.PAD_X, y + 14f, d.semi, 14f, d.ink, Draw.em(14f, 0.06f));
-            String v = p.volume() + " / " + p.volumeMax();
-            d.right(c, v, Draw.W - Frame.PAD_X, y + 14f, d.med, 10f, d.muted, 0.4f);
-            float by = y + 30f;
-            d.box(c, Frame.PAD_X, by, Draw.W - Frame.PAD_X, by + 14f, d.ink);
-            float frac = p.volumeMax() > 0 ? p.volume() / (float) p.volumeMax() : 0f;
-            d.fill(c, Frame.PAD_X + 2f, by + 2f, Frame.PAD_X + 2f + (Draw.W - 2 * Frame.PAD_X - 4f) * frac, by + 12f, d.ink);
         }
     }
 

@@ -62,6 +62,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     private static final long INTRO_MS = 1100L, BOOT_MIN_MS = 1400L;
 
     private boolean longHandled;
+    private int lowWarned = 100;
     /** B1b: locked after the screen goes off while something plays; hold Center to unlock. */
     private boolean locked;
 
@@ -259,7 +260,24 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
 
     /** Volume step from the wheel (Now Playing): shows the I2 box. */
     public void volume(int delta) {
-        Player pl = JulyApp.get().player();
+        final Player pl = JulyApp.get().player();
+        if (delta > 0 && com.july.os.system.Audio.shouldWarn(pl.volume() + delta, pl.volumeMax())) {
+            // I3: ask once before going loud.
+            show(new Popup.Hearing(new Runnable() {
+                @Override
+                public void run() {
+                    android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, pl.volumeMax() * 7 / 10, 0);
+                }
+            }, new Runnable() {
+                @Override
+                public void run() {
+                    com.july.os.system.Audio.ackHearing();
+                    pl.stepVolume(1);
+                }
+            }));
+            return;
+        }
         pl.stepVolume(delta);
         if (popup instanceof Popup.Volume) {
             ((Popup.Volume) popup).value = pl.volume();
@@ -336,7 +354,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             sc.drawFull(c, draw);
         } else {
             Player pl = JulyApp.get().player();
-            Track next = sc.wantsNextStrip() && pl.hasQueue() ? pl.next() : null;
+            Track next = sc.wantsNextStrip() && pl.hasQueue() && JulyApp.get().prefs().getBoolean("next_strip", true) ? pl.next() : null;
             float t = Frame.bodyTop(), b = Frame.bodyBottom(next != null);
             draw.fill(c, 0, t, Draw.W, b, draw.bg);
             c.save();
@@ -410,6 +428,13 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             status.battery = sc > 0 && lvl >= 0 ? Math.round(lvl * 100f / sc) : -1;
             int st = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
             status.charging = st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL;
+            // I7: warn at 10% and 5% while not charging.
+            int warnAt = status.battery <= 5 ? 5 : status.battery <= 10 ? 10 : 0;
+            if (status.charging || warnAt == 0) lowWarned = 100;
+            else if (warnAt < lowWarned && !booting) {
+                lowWarned = warnAt;
+                show(new Popup.LowBattery(status.battery));
+            }
             redraw();
         }
     };
@@ -447,6 +472,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
 
     @Override
     public void onPlayerChanged() {
+        if (JulyApp.get().player().takeError()) push(new com.july.os.screens.ErrorScreen());
         redraw();
     }
 
@@ -552,6 +578,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         }
         Screen s = top();
         if (s == null) return;
+        if (k == Screen.Key.UP || k == Screen.Key.DOWN) com.july.os.system.Audio.tick(this);
         if (s.onKey(k)) {
             redraw();
             return;

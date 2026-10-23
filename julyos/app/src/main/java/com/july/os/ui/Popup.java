@@ -219,4 +219,107 @@ public abstract class Popup {
             d.box(c, l, t, l + w, t + h, d.ink, 2f);
         }
     }
+
+    // ---- I3 · hearing safety ----
+
+    public static final class Hearing extends Popup {
+        private final Runnable lower, carryOn;
+        private int sel;
+
+        public Hearing(Runnable lower, Runnable carryOn) {
+            this.lower = lower;
+            this.carryOn = carryOn;
+        }
+
+        @Override
+        public boolean onKey(Screen.Key k) {
+            switch (k) {
+                case UP: sel = 0; return true;
+                case DOWN: sel = 1; return true;
+                case CENTER:
+                    (sel == 0 ? lower : carryOn).run();
+                    return false;
+                case BACK:
+                    lower.run();
+                    return false;
+                default: return true;
+            }
+        }
+
+        @Override
+        public void draw(Canvas c, Draw d) {
+            scrim(c, d);
+            float w = 300f, l = (Draw.W - w) / 2f;
+            java.util.List<String> lines = d.wrap("LISTENING THIS LOUD FOR A LONG TIME CAN DAMAGE HEARING.", w - 32f, d.med, 10f, 0f, 3);
+            float h = 16f + 28f + 8f + 18f + 6f + lines.size() * 15f + 4f + 10f + 34f + 14f + 34f + 14f;
+            float t = (Draw.H - h) / 2f;
+            d.fill(c, l, t, l + w, t + h, d.bg);
+            float y = t + 16f;
+            d.icon(c, Icons.WARNING, Draw.W / 2f - 14f, y, 28f, d.ink, 1.8f);
+            y += 28f + 8f + 14f;
+            d.centered(c, "HIGH VOLUME", Draw.W / 2f, y, d.semi, 14f, d.ink, 0f);
+            y += 6f + 4f;
+            for (String ln : lines) {
+                y += 13f;
+                d.centered(c, ln, Draw.W / 2f, y, d.med, 10f, d.muted, 0f);
+                y += 2f;
+            }
+            y += 4f + 10f;
+            String[] labels = {"Lower volume", "Continue"};
+            for (int i = 0; i < 2; i++) {
+                float bl = l + 14f, br = l + w - 14f;
+                if (i == sel) d.fill(c, bl, y, br, y + 34f, d.ink);
+                else d.box(c, bl, y, br, y + 34f, d.ink);
+                d.text(c, Draw.up(labels[i]), bl + 14f, Draw.mid(y, 34f, 14f), d.semi, 14f, i == sel ? d.bg : d.ink, Draw.em(14f, 0.06f));
+                y += 34f + 10f;
+            }
+            d.box(c, l, t, l + w, t + h, d.ink, 2f);
+        }
+    }
+
+    // ---- I7 · low battery ----
+
+    public static final class LowBattery extends Popup {
+        private final int level;
+
+        public LowBattery(int level) {
+            this.level = level;
+        }
+
+        @Override public long autoCloseMs() { return 4000; }
+        @Override public boolean onKey(Screen.Key k) { return false; }
+
+        @Override
+        public void draw(Canvas c, Draw d) {
+            scrim(c, d);
+            float w = 260f, h = 18f + 24f + 10f + 18f + 4f + 14f + 18f, l = (Draw.W - w) / 2f, t = (Draw.H - h) / 2f;
+            d.fill(c, l, t, l + w, t + h, d.bg);
+            d.battery(c, Draw.W / 2f - 24f, t + 18f, 48f, level / 100f, d.ink, 1.4f);
+            d.centered(c, "BATTERY " + level + "%", Draw.W / 2f, t + 18f + 24f + 10f + 14f, d.semi, 14f, d.ink, 0f);
+            d.centered(c, "CHARGE SOON", Draw.W / 2f, t + 18f + 24f + 10f + 18f + 4f + 10f, d.med, 10f, d.muted, 0f);
+            d.box(c, l, t, l + w, t + h, d.ink, 2f);
+        }
+    }
+
+    // ---- I6 · loading ----
+
+    public static final class Loading extends Popup {
+        private final String label;
+
+        public Loading(String label) {
+            this.label = label != null ? label : "Loading";
+        }
+
+        @Override public boolean onKey(Screen.Key k) { return k != Screen.Key.BACK; }
+
+        @Override
+        public void draw(Canvas c, Draw d) {
+            scrim(c, d);
+            float w = 220f, h = 22f + 26f + 12f + 12f + 22f, l = (Draw.W - w) / 2f, t = (Draw.H - h) / 2f;
+            d.fill(c, l, t, l + w, t + h, d.bg);
+            d.icon(c, Icons.RESTART, Draw.W / 2f - 13f, t + 22f, 26f, d.ink, 1.8f);
+            d.centered(c, Draw.up(label), Draw.W / 2f, t + 22f + 26f + 12f + 10f, d.semi, 12f, d.ink, Draw.em(12f, 0.12f));
+            d.box(c, l, t, l + w, t + h, d.ink, 2f);
+        }
+    }
 }

@@ -13,6 +13,14 @@ android {
         versionCode 1
         versionName '0.1'
         ndk { abiFilters 'armeabi-v7a' } // the Y1's MT6572
+        // H21 Updates compares this with the newest commit on GitHub.
+        def sha = 'unknown'
+        try { sha = 'git rev-parse --short HEAD'.execute([], rootDir).text.trim() } catch (ignored) { }
+        buildConfigField 'String', 'GIT_SHA', '"' + sha + '"'
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {

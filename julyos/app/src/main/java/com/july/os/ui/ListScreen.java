@@ -114,10 +114,12 @@ public class ListScreen extends Screen {
     @Override
     public void drawBody(Canvas c, Draw d, float t, float b) {
         if (rows.isEmpty()) {
-            float cy = (t + b) / 2f;
-            d.centered(c, Draw.up(emptyTitle), Draw.W / 2f, cy - (emptySub.length() > 0 ? 4f : -4f), d.semi, 14f, d.ink, Draw.em(14f, 0.04f));
+            // I12: list glyph, then the message.
+            float cy = (t + b) / 2f + 10f;
+            d.icon(c, Icons.LIST, Draw.W / 2f - 18f, cy - 36f - 12f - 10f, 36f, d.ink, 1.6f);
+            d.centered(c, Draw.up(emptyTitle), Draw.W / 2f, cy, d.semi, 14f, d.ink, 0f);
             if (emptySub.length() > 0) {
-                d.centered(c, Draw.up(emptySub), Draw.W / 2f, cy + 16f, d.med, 10f, d.muted, Draw.em(10f, 0.06f));
+                d.centered(c, Draw.up(emptySub), Draw.W / 2f, cy + 18f, d.med, 10f, d.muted, Draw.em(10f, 0.06f));
             }
             return;
         }

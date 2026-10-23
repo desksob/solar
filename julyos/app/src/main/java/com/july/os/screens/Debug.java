@@ -21,9 +21,9 @@ public final class Debug {
         if ("np".equals(name)) return new NowPlayingScreen();
         if ("queue".equals(name)) return new NowPlayingScreen.QueueScreen();
         if ("settings".equals(name)) return new SettingsScreens.Root();
-        if ("playback".equals(name)) return new SettingsScreens.Playback();
+        if ("playback".equals(name)) return new SettingsMore.Playback();
         if ("theme".equals(name)) return new SettingsScreens.Theme();
-        if ("sound".equals(name)) return new SettingsScreens.Sound();
+        if ("sound".equals(name)) return new SettingsMore.Sound();
         if ("about".equals(name)) return new SettingsScreens.About();
         if ("wifi".equals(name)) return new WifiScreens.List_();
         if ("wifipw".equals(name)) return new WifiScreens.Password("Kilimani_Home", "[WPA2-PSK-CCMP]");
@@ -40,6 +40,14 @@ public final class Debug {
         if ("stations".equals(name)) return new NetRadioScreens.StationList("Browse · jazz", "tag:jazz");
         if ("fm".equals(name)) return new NetRadioScreens.Tuner();
         if ("fmpresets".equals(name)) return new NetRadioScreens.Presets();
+        if ("eq".equals(name)) return new SettingsMore.Eq();
+        if ("homemenu".equals(name)) return new SettingsMore.HomeMenu();
+        if ("storage".equals(name)) return new SettingsMore.Storage();
+        if ("datetime".equals(name)) return new SettingsMore.DateTime();
+        if ("language".equals(name)) return new SettingsMore.Language();
+        if ("sleep".equals(name)) return new SettingsMore.Sleep();
+        if ("updates".equals(name)) return new SettingsMore.Updates();
+        if ("usb".equals(name)) return new SettingsMore.Usb();
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

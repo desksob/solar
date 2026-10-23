@@ -162,7 +162,7 @@ public final class NowPlayingScreen extends Screen implements Art.Callback {
         items.add(new Popup.Menu.Item(Icons.PLAY, "Playback options", new Runnable() {
             @Override
             public void run() {
-                shell.push(new SettingsScreens.Playback());
+                shell.push(new SettingsMore.Playback());
             }
         }));
         shell.show(new Popup.Menu("", items));

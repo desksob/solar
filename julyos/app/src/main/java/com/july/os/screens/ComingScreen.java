@@ -7,7 +7,7 @@ import com.july.os.ui.Icons;
 import com.july.os.ui.Screen;
 
 /** A section that is still being rebuilt: says so plainly instead of showing anything half-done. */
-public final class ComingScreen extends Screen {
+public class ComingScreen extends Screen {
 
     private final String name;
 

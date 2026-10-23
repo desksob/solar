@@ -39,7 +39,21 @@ public final class JulyApp extends Application {
                 com.july.os.fm.Fm.stopIfOn();
             }
         });
+        // H15 resume on start: once songs are known, rebuild the last queue (paused).
+        library.addListener(new Library.Listener() {
+            private boolean done;
+
+            @Override
+            public void onLibraryLoaded() {
+                if (done || library.songs().isEmpty()) return;
+                done = true;
+                java.util.Map<String, com.july.os.media.Track> byPath = new java.util.HashMap<String, com.july.os.media.Track>();
+                for (com.july.os.media.Track t : library.songs()) byPath.put(t.path, t);
+                player.restoreState(byPath);
+            }
+        });
         library.load();
+        com.july.os.system.Audio.applyAtStart(this);
     }
 
     public Library library() { return library; }

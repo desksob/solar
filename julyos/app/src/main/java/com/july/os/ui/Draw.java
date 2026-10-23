@@ -231,6 +231,14 @@ public final class Draw {
         return w;
     }
 
+    /** Battery glyph from the design's 26x14 viewBox, scaled to width {@code w}, filled to {@code frac}. */
+    public void battery(Canvas c, float l, float t, float w, float frac, int color, float stroke) {
+        float k = w / 26f;
+        box(c, l + 0.8f * k, t + 1.8f * k, l + 21.8f * k, t + 12.2f * k, color, stroke * k);
+        fill(c, l + 23f * k, t + 5f * k, l + 25f * k, t + 9f * k, color);
+        fill(c, l + 3f * k, t + 4f * k, l + (3f + 14.8f * Math.max(0.05f, Math.min(1f, frac))) * k, t + 10f * k, color);
+    }
+
     /** Black tag with light text in a corner of artwork ("PAUSED", "CONNECTING"). */
     public void tag(Canvas c, String label, float l, float t) {
         String s = up(label);
