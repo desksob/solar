@@ -995,6 +995,10 @@ public class ThemeManager {
                 copyAssetTree(ctx.getAssets(), BUNDLED_ASSET_DIR, dest);
             } else if (isLegacyStockDefaultTheme(readConfigJson(config))) {
                 copyAssetTree(ctx.getAssets(), BUNDLED_ASSET_DIR, dest);
+            } else if (!bundledTitleMatches(ctx, config)) {
+                // 2026-10-23 — July: built-in theme changed look (Aura -> July); same file names,
+                // so the copy-missing path below would keep the old images. Re-seed the whole folder.
+                copyAssetTree(ctx.getAssets(), BUNDLED_ASSET_DIR, dest);
             } else {
                 syncBundledSolarAssets(ctx, dest);
                 syncBundledThemeBlocks(ctx, dest);
@@ -1005,6 +1009,24 @@ public class ThemeManager {
         } catch (Exception ignored) {}
         ensureBundledAssetThemes(ctx);
         ensureBundledFallback(ctx);
+    }
+
+    /** True when the on-disk Default has the same theme_info.title as the APK's bundled one. */
+    private static boolean bundledTitleMatches(Context ctx, File diskConfig) {
+        try {
+            byte[] raw = readAllFromAsset(ctx.getAssets(), BUNDLED_ASSET_DIR + "/config.json");
+            JSONObject bundled = new JSONObject(new String(raw, "UTF-8"));
+            JSONObject disk = readConfigJson(diskConfig);
+            String want = titleOf(bundled);
+            return want.isEmpty() || (disk != null && want.equals(titleOf(disk)));
+        } catch (Exception e) {
+            return true; // unreadable: keep the gentle sync rather than wiping the folder
+        }
+    }
+
+    private static String titleOf(JSONObject root) {
+        JSONObject info = root.optJSONObject("theme_info");
+        return info != null ? info.optString("title", "").trim() : "";
     }
 
     public static void ensureBundledAssetThemes(Context ctx) {

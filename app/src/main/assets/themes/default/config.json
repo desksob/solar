@@ -1,15 +1,15 @@
 {
   "theme_info": {
-    "title": "Aura",
-    "author": "The Solar Project",
-    "authorUrl": "https://github.com/thesolarproject/solar",
-    "description": "The default look for Solar",
+    "title": "July",
+    "author": "July Radio",
+    "authorUrl": "https://github.com/desksob/solar",
+    "description": "Black and white, IBM Plex Mono. The July Radio look for Solar.",
     "externalDownloadUrl": ""
   },
   "themeCover": "cover_YS.png",
   "desktopWallpaper": "desk_bg001_YS.png",
   "globalWallpaper": "global_bg001_YS.png",
-  "fontFamily": "opensans-condbold.ttf",
+  "fontFamily": "IBMPlexMono-Medium.ttf",
   "solarConfig": {
     "settingsAbout": "square_full_logo_colour.png",
     "appGet_Music": "Music_YS.png",
@@ -26,7 +26,7 @@
   },
   "itemConfig": {
     "itemTextColor": "#ffffff",
-    "itemSelectedTextColor": "#ffffff",
+    "itemSelectedTextColor": "#000000",
     "itemSelectedBackground": "1_YS.png",
     "itemBackground": "",
     "itemRightArrow": "2_YS.png"
@@ -35,8 +35,8 @@
     "dialogOptionBackground": "3.png",
     "dialogOptionTextColor": "#ffffff",
     "dialogOptionSelectedBackground": "4_YS.png",
-    "dialogOptionSelectedTextColor": "#ffffff",
-    "dialogBackgroundColor": "#ffffff"
+    "dialogOptionSelectedTextColor": "#000000",
+    "dialogBackgroundColor": "#000000"
   },
   "menuConfig": {
     "menuBackgroundColor": "#000000",
@@ -125,7 +125,7 @@
     "blDisconnected": "",
     "headsetWithMic": "",
     "headsetWithoutMic": "",
-    "statusBarColor": "",
+    "statusBarColor": "#000000",
     "battery": [
       "battery.001.png",
       "battery.002.png",

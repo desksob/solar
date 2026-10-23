@@ -507,6 +507,7 @@ public class MainActivity extends Activity {
     /** Full home menu rebuild waits until root transition finishes — keeps Back snappy. */
     private boolean pendingDeferredHomeMenuRebuild;
     private View layoutMainMenu, layoutBrowserMode;
+    private View julyHomeDivider;
     private FrameLayout layoutSettingsMode;
     private View layoutBluetoothMode, layoutWifiMode, layoutWifiKeyboard;
     private View layoutPlayerMode;
@@ -11962,6 +11963,9 @@ public class MainActivity extends Activity {
             DebugAgentLog.log(this, "MainActivity.buildHomeMenu", "build start", "H-E", d);
         } catch (Exception ignored) {}
         // #endregion
+        if (julyHomeDivider != null) {
+            julyHomeDivider.setVisibility(ActiveThemeEngine.isJjMode() ? View.GONE : View.VISIBLE);
+        }
         if (ActiveThemeEngine.isJjMode()) {
             buildJjHomeMenu();
             return;
@@ -12054,6 +12058,7 @@ public class MainActivity extends Activity {
                 : (int) getResources().getDimension(R.dimen.y1_menu_height);
         applyMenuPanelBackground(menuListHost, y1RowWidthPx, panelH,
                 (int) getResources().getDimension(R.dimen.y1_menu_height));
+        ensureJulyHomeDivider();
         if (buildGen != homeMenuBuildGen) return;
         int childCount = containerHomeMenuItems.getChildCount();
         // #region agent log
@@ -12247,6 +12252,7 @@ public class MainActivity extends Activity {
         TextView label = (TextView) row.getTag(HOME_MENU_TAG_LABEL);
         ImageView arrow = (ImageView) row.getTag(HOME_MENU_TAG_ARROW);
         label.setText(getString(entry.labelResId));
+        label.setAllCaps(true); // July: uppercase home labels, like the July Radio screens
         row.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -12300,6 +12306,7 @@ public class MainActivity extends Activity {
         TextView label = (TextView) row.getTag(HOME_MENU_TAG_LABEL);
         ImageView arrow = (ImageView) row.getTag(HOME_MENU_TAG_ARROW);
         label.setText(getString(R.string.home_menu_more));
+        label.setAllCaps(true);
         arrow.setVisibility(View.VISIBLE);
         row.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -12323,6 +12330,35 @@ public class MainActivity extends Activity {
         });
         applyY1ListRowStyle(row, idx == focusedHomeMenuIndex, label, null, arrow, Y1_ROW_HOME);
         return row;
+    }
+
+    /**
+     * 2026-10-23 — July: thin white rule between the home list and the preview pane.
+     * Layman: the same hairline the July Radio screens use to separate columns.
+     * Tech: added once to layout_main_menu at runtime; Y1/Y2 landscape panel only (A5 / phone
+     * chrome lay the home out differently). Reversal: delete this method and its call.
+     */
+    private void ensureJulyHomeDivider() {
+        if (julyHomeDivider != null || !(layoutMainMenu instanceof FrameLayout)) return;
+        if (DeviceFeatures.isA5() || isPhoneChromeActive()) return;
+        android.content.res.Resources r = getResources();
+        int listRight = r.getDimensionPixelSize(R.dimen.y1_menu_left)
+                + r.getDimensionPixelSize(R.dimen.y1_menu_width);
+        int previewLeft = r.getDisplayMetrics().widthPixels
+                - r.getDimensionPixelSize(R.dimen.y1_preview_margin_right)
+                - r.getDimensionPixelSize(R.dimen.y1_preview_width);
+        if (previewLeft <= listRight) return;
+        int top = r.getDimensionPixelSize(R.dimen.y1_status_bar_height);
+        int inset = Math.round(12 * r.getDisplayMetrics().density);
+        View rule = new View(this);
+        rule.setBackgroundColor(0x59FFFFFF);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                Math.max(1, Math.round(r.getDisplayMetrics().density)),
+                r.getDimensionPixelSize(R.dimen.y1_menu_height) - 2 * inset);
+        lp.leftMargin = (listRight + previewLeft) / 2;
+        lp.topMargin = top + inset;
+        ((FrameLayout) layoutMainMenu).addView(rule, lp);
+        julyHomeDivider = rule;
     }
 
     /** Home list host has no outer padding — nudge selection arrows left so they are not clipped. */

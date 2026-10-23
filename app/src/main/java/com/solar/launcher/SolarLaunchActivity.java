@@ -8,13 +8,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.util.TypedValue;
-import android.view.Gravity;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
+import com.solar.launcher.july.JulySplashView;
 import com.solar.launcher.platform.PlatformPrepWizardActivity;
 
 /**
@@ -32,6 +28,8 @@ public class SolarLaunchActivity extends Activity {
     private static final String MAIN = "com.solar.launcher.MainActivity";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean handedOff;
+    private long createdAt;
+    private JulySplashView julySplash;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +40,7 @@ public class SolarLaunchActivity extends Activity {
         // Was: non-A5 always landscape (phones spun sideways before MainActivity).
         applyLaunchOrientation();
         super.onCreate(savedInstanceState);
+        createdAt = android.os.SystemClock.uptimeMillis();
         setContentView(buildSplash());
         // #region agent log
         try {
@@ -83,12 +82,14 @@ public class SolarLaunchActivity extends Activity {
                 // #region agent log
                 Log.e(TAG, "MainActivity preload ms=" + ms + " err=" + fail);
                 // #endregion
-                mainHandler.post(new Runnable() {
+                // July: let the logo finish its swing-in; never adds time once preload is slower.
+                long shown = android.os.SystemClock.uptimeMillis() - createdAt;
+                mainHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         handOff(extras, ms, fail);
                     }
-                });
+                }, Math.max(0L, JulySplashView.INTRO_MS - shown));
             }
         }, "SolarMainPreload").start();
     }
@@ -119,41 +120,24 @@ public class SolarLaunchActivity extends Activity {
     }
 
     /**
-     * 2026-07-16 — Full-screen wait copy so first boot is never blank.
-     * Layman: big spinner + “Getting things ready, please wait…”.
+     * 2026-10-23 — July: 3D logo splash (was spinner + "Getting things ready").
+     * Layman: the July dog swings in; the setup message only appears if loading is slow.
+     * Reversal: return the old spinner/TextView column from git history.
      */
     private FrameLayout buildSplash() {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
-        LinearLayout col = new LinearLayout(this);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setGravity(Gravity.CENTER);
-        col.setPadding(24, 24, 24, 24);
-
-        ProgressBar spinner = new ProgressBar(this, null, android.R.attr.progressBarStyleLarge);
-        col.addView(spinner, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        TextView title = new TextView(this);
-        title.setText(R.string.getting_things_ready);
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, DeviceFeatures.isA5() ? 16f : 18f);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 28, 0, 8);
-        col.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        TextView detail = new TextView(this);
-        detail.setText(R.string.getting_things_ready_detail);
-        detail.setTextColor(0xFFCCCCCC);
-        detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, DeviceFeatures.isA5() ? 12f : 13f);
-        detail.setGravity(Gravity.CENTER);
-        col.addView(detail, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-        root.addView(col, lp);
+        julySplash = new JulySplashView(this);
+        root.addView(julySplash, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        mainHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!handedOff && julySplash != null) {
+                    julySplash.setStatus(getString(R.string.getting_things_ready));
+                }
+            }
+        }, 2500L);
         return root;
     }
 
