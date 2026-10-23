@@ -11,12 +11,14 @@ public final class Track {
     public final long durationMs;
     public final String path;
     public final int trackNo;
+    public String genre = "";
 
     public Track(long id, String title, String artist, String album, long albumId, int year,
                  long durationMs, String path, int trackNo) {
         this.id = id;
         this.title = clean(title, path);
-        this.artist = artist == null || artist.equals("<unknown>") ? "Unknown artist" : artist;
+        this.artist = artist == null || artist.trim().length() == 0 || artist.equals("<unknown>")
+                ? "Unknown artist" : artist.trim();
         this.album = album == null ? "" : album;
         this.albumId = albumId;
         this.year = year;

@@ -337,7 +337,8 @@ public final class RadioScreens {
             String time = JulyRadio.toLocal(sh.start);
             float tw = d.width(time, d.med, 10f, 0f);
             float maxW = Draw.W - Frame.PAD_X - tw - 12f - x;
-            d.text(c, d.fit(Draw.up(sh.name), maxW, onNow ? d.semi : d.med, 13f, 0f), x, t + 20f, onNow ? d.semi : d.med, 13f, fg, 0f);
+            float nameBase = sh.host.length() > 0 ? t + 20f : Draw.mid(t, 44f, 13f);
+            d.text(c, d.fit(Draw.up(sh.name), maxW, onNow ? d.semi : d.med, 13f, 0f), x, nameBase, onNow ? d.semi : d.med, 13f, fg, 0f);
             if (sh.host.length() > 0) {
                 float tr = Draw.em(10f, 0.04f);
                 d.text(c, d.fit(Draw.up("with " + sh.host), maxW, d.med, 10f, tr), x, t + 34f, d.med, 10f, sub, tr);

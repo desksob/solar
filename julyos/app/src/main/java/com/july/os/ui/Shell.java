@@ -93,9 +93,27 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         setContentView(view);
         bootAt = SystemClock.uptimeMillis();
         debugKeys = getIntent() != null && getIntent().getBooleanExtra("debugKeys", false);
+        openFromIntent(getIntent());
         push(new HomeScreen());
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
+    }
+
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        openFromIntent(i);
+    }
+
+    /** Test hook: am start ... --es open songs|albums|artists|music|schedule|live|favs|radio|np|queue|settings. */
+    private void openFromIntent(Intent i) {
+        String what = i != null ? i.getStringExtra("open") : null;
+        if (what == null) return;
+        booting = false;
+        home();
+        Screen s = com.july.os.screens.Debug.screenFor(what);
+        if (s != null) push(s);
     }
 
     @Override
@@ -357,10 +375,17 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         redraw();
     }
 
+    private int libVersion = -1;
+
     @Override
     public void onLibraryLoaded() {
-        Screen s = top();
-        if (s != null) s.onShow();
+        // Progress ticks only redraw; lists rebuild when the library actually changed.
+        int v = JulyApp.get().library().version();
+        if (v != libVersion) {
+            libVersion = v;
+            Screen s = top();
+            if (s != null) s.onShow();
+        }
         redraw();
     }
 

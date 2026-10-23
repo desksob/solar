@@ -29,6 +29,13 @@ public final class MusicScreens {
         return JulyApp.get().library();
     }
 
+    /** While the first scan runs, empty lists say so instead of "no songs". */
+    static void scanningState(ListScreen s) {
+        if (lib().isScanning() && !lib().isLoaded()) {
+            s.setEmpty("Scanning library", lib().scannedCount() + " files read");
+        }
+    }
+
     /** Play {@code list} from {@code i} and open Now Playing. */
     static void playFrom(Shell shell, List<Track> list, int i) {
         JulyApp.get().player().play(list, i);
@@ -165,6 +172,7 @@ public final class MusicScreens {
             List<Track> all = lib().songs();
             List<Row> r = new ArrayList<Row>();
             for (int i = 0; i < all.size(); i++) r.add(songRow(shell, all, i));
+            scanningState(this);
             setRows(r);
         }
     }
@@ -217,6 +225,7 @@ public final class MusicScreens {
                 });
                 r.add(row);
             }
+            scanningState(this);
             setRows(r);
         }
 

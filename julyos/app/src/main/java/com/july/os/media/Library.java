@@ -1,10 +1,6 @@
 package com.july.os.media;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
-import android.provider.MediaStore;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -16,8 +12,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * The music library, read from Android's media database (the Y1 scans its storage itself).
- * Loaded once on a background thread; screens read the in-memory lists.
+ * The music library: July's own scan of the Y1's storage (this ROM has no media database).
+ * Loaded on a background thread; screens read the in-memory lists.
  */
 public final class Library {
 
@@ -78,26 +74,45 @@ public final class Library {
         }, "july-library").start();
     }
 
+    private volatile boolean scanning;
+    private volatile int version;
+
+    /** Bumps whenever the lists change (not on plain progress ticks). */
+    public int version() {
+        return version;
+    }
+    private volatile int scanned;
+
+    public boolean isScanning() {
+        return scanning;
+    }
+
+    /** Files whose tags were read so far in the current scan. */
+    public int scannedCount() {
+        return scanned;
+    }
+
     private void loadNow() {
-        List<Track> all = new ArrayList<Track>();
-        ContentResolver cr = app.getContentResolver();
-        Cursor c = null;
-        try {
-            c = cr.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE,
-                            MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM,
-                            MediaStore.Audio.Media.ALBUM_ID, MediaStore.Audio.Media.YEAR,
-                            MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA,
-                            MediaStore.Audio.Media.TRACK},
-                    MediaStore.Audio.Media.IS_MUSIC + "!=0", null, null);
-            while (c != null && c.moveToNext()) {
-                all.add(new Track(c.getLong(0), c.getString(1), c.getString(2), c.getString(3),
-                        c.getLong(4), c.getInt(5), c.getLong(6), c.getString(7), c.getInt(8) % 1000));
+        scanning = true;
+        scanned = 0;
+        Scanner.Result res = new Scanner(app).scan(new Scanner.Progress() {
+            @Override
+            public void onProgress(int n) {
+                scanned = n;
+                notifyListeners();
             }
-        } catch (Exception ignored) {
-        } finally {
-            if (c != null) c.close();
-        }
+
+            @Override
+            public void onBatch(Scanner.Result soFar) {
+                apply(soFar, false);
+            }
+        });
+        apply(res, true);
+    }
+
+    /** Build artists / albums / genres / playlists from a (partial) scan and publish them. */
+    private void apply(Scanner.Result res, boolean finished) {
+        List<Track> all = new ArrayList<Track>(res.tracks);
         Collections.sort(all, new Comparator<Track>() {
             @Override
             public int compare(Track a, Track b) {
@@ -107,9 +122,10 @@ public final class Library {
 
         Map<String, Group> byArtist = new LinkedHashMap<String, Group>();
         Map<Long, Group> byAlbum = new LinkedHashMap<Long, Group>();
-        Map<Long, Track> byId = new java.util.HashMap<Long, Track>();
+        Map<String, Group> byGenre = new LinkedHashMap<String, Group>();
+        Map<String, Track> byPath = new java.util.HashMap<String, Track>();
         for (Track t : all) {
-            byId.put(t.id, t);
+            byPath.put(t.path, t);
             String ak = t.artist.toLowerCase(Locale.US);
             Group a = byArtist.get(ak);
             if (a == null) { a = new Group(t.artist, 0); byArtist.put(ak, a); }
@@ -121,31 +137,42 @@ public final class Library {
                 byAlbum.put(t.albumId, al);
             }
             al.tracks.add(t);
+            if (t.genre.length() > 0) {
+                String gk = t.genre.toLowerCase(Locale.US);
+                Group g = byGenre.get(gk);
+                if (g == null) { g = new Group(t.genre, gk.hashCode()); byGenre.put(gk, g); }
+                g.tracks.add(t);
+            }
         }
-        List<Group> ar = new ArrayList<Group>(byArtist.values());
-        List<Group> al = new ArrayList<Group>(byAlbum.values());
         Comparator<Group> byName = new Comparator<Group>() {
             @Override
             public int compare(Group a, Group b) {
                 return a.name.compareToIgnoreCase(b.name);
             }
         };
-        Collections.sort(ar, byName);
-        Collections.sort(al, byName);
         Comparator<Track> trackOrder = new Comparator<Track>() {
             @Override
             public int compare(Track a, Track b) {
                 return a.trackNo != b.trackNo ? a.trackNo - b.trackNo : a.title.compareToIgnoreCase(b.title);
             }
         };
-        for (Group g : al) Collections.sort(g.tracks, trackOrder);
-
-        List<Group> ge = members(cr, MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI,
-                MediaStore.Audio.Genres._ID, MediaStore.Audio.Genres.NAME, byId, true);
-        List<Group> pl = members(cr, MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI,
-                MediaStore.Audio.Playlists._ID, MediaStore.Audio.Playlists.NAME, byId, false);
+        List<Group> ar = new ArrayList<Group>(byArtist.values());
+        List<Group> al = new ArrayList<Group>(byAlbum.values());
+        List<Group> ge = new ArrayList<Group>(byGenre.values());
+        List<Group> pl = new ArrayList<Group>();
+        for (Map.Entry<String, List<String>> e : res.playlists.entrySet()) {
+            Group g = new Group(e.getKey(), e.getKey().hashCode());
+            for (String p : e.getValue()) {
+                Track t = byPath.get(p);
+                if (t != null) g.tracks.add(t);
+            }
+            pl.add(g);
+        }
+        Collections.sort(ar, byName);
+        Collections.sort(al, byName);
         Collections.sort(ge, byName);
         Collections.sort(pl, byName);
+        for (Group g : al) Collections.sort(g.tracks, trackOrder);
 
         synchronized (this) {
             songs.clear(); songs.addAll(all);
@@ -153,8 +180,14 @@ public final class Library {
             albums.clear(); albums.addAll(al);
             genres.clear(); genres.addAll(ge);
             playlists.clear(); playlists.addAll(pl);
-            loaded = true;
+            loaded = finished || loaded || !all.isEmpty();
         }
+        if (finished) scanning = false;
+        version++;
+        notifyListeners();
+    }
+
+    private void notifyListeners() {
         final List<Listener> ls;
         synchronized (this) {
             ls = new ArrayList<Listener>(listeners);
@@ -166,42 +199,6 @@ public final class Library {
                 for (Listener l : ls) l.onLibraryLoaded();
             }
         });
-    }
-
-    /** Genres / playlists and their member tracks. */
-    private static List<Group> members(ContentResolver cr, Uri base, String idCol, String nameCol,
-                                       Map<Long, Track> byId, boolean genre) {
-        List<Group> out = new ArrayList<Group>();
-        Cursor c = null;
-        try {
-            c = cr.query(base, new String[]{idCol, nameCol}, null, null, null);
-            while (c != null && c.moveToNext()) {
-                long id = c.getLong(0);
-                String name = c.getString(1);
-                if (name == null || name.trim().length() == 0) continue;
-                Group g = new Group(name.trim(), id);
-                Uri mu = genre ? MediaStore.Audio.Genres.Members.getContentUri("external", id)
-                        : MediaStore.Audio.Playlists.Members.getContentUri("external", id);
-                Cursor m = null;
-                try {
-                    m = cr.query(mu, new String[]{genre ? MediaStore.Audio.Genres.Members.AUDIO_ID
-                            : MediaStore.Audio.Playlists.Members.AUDIO_ID},
-                            null, null, genre ? null : MediaStore.Audio.Playlists.Members.PLAY_ORDER);
-                    while (m != null && m.moveToNext()) {
-                        Track t = byId.get(m.getLong(0));
-                        if (t != null) g.tracks.add(t);
-                    }
-                } catch (Exception ignored) {
-                } finally {
-                    if (m != null) m.close();
-                }
-                if (!g.tracks.isEmpty() || !genre) out.add(g);
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (c != null) c.close();
-        }
-        return out;
     }
 
     /** Case-insensitive search across title, artist and album. */

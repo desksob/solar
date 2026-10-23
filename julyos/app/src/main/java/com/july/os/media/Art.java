@@ -75,6 +75,31 @@ public final class Art {
         return null;
     }
 
+    /** cover.jpg / folder.jpg next to the song. */
+    private static byte[] folderArt(java.io.File dir) {
+        if (dir == null) return null;
+        String[] names = {"cover.jpg", "folder.jpg", "cover.png", "folder.png", "front.jpg", "album.jpg"};
+        java.io.File[] kids = dir.listFiles();
+        if (kids == null) return null;
+        for (String n : names) {
+            for (java.io.File k : kids) {
+                if (!k.getName().equalsIgnoreCase(n) || k.length() > 4 * 1024 * 1024) continue;
+                java.io.FileInputStream in = null;
+                try {
+                    in = new java.io.FileInputStream(k);
+                    byte[] b = new byte[(int) k.length()];
+                    int off = 0, r;
+                    while (off < b.length && (r = in.read(b, off, b.length - off)) > 0) off += r;
+                    return b;
+                } catch (Exception ignored) {
+                } finally {
+                    if (in != null) try { in.close(); } catch (Exception ignored) { }
+                }
+            }
+        }
+        return null;
+    }
+
     private Bitmap decode(Track t, int target) {
         byte[] bytes = null;
         InputStream in = null;
@@ -101,6 +126,7 @@ public final class Art {
                 try { r.release(); } catch (Exception ignored) { }
             }
         }
+        if (bytes == null && t.path != null) bytes = folderArt(new java.io.File(t.path).getParentFile());
         if (bytes == null) return null;
         BitmapFactory.Options o = new BitmapFactory.Options();
         o.inJustDecodeBounds = true;

@@ -146,7 +146,8 @@ public final class JulyPlayer {
                     }
                 }
             });
-            mp.setDataSource(url);
+            // Through the local relay: the stream is chunked, which 4.2's player can't read.
+            mp.setDataSource(StreamProxy.wrap(url));
             mp.prepareAsync();
             Log.i(TAG, "connecting " + url);
             // prepareAsync has no timeout of its own; never sit on "Connecting" forever.
@@ -194,6 +195,7 @@ public final class JulyPlayer {
 
     private static void release() {
         releasePlayerOnly();
+        StreamProxy.cut();
         if (wakeLock != null) {
             try {
                 if (wakeLock.isHeld()) wakeLock.release();

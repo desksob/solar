@@ -57,7 +57,7 @@ public class ListScreen extends Screen {
     protected String emptyTitle = "Nothing here yet";
     protected String emptySub = "";
     protected boolean showCount = true;
-    protected boolean nextStrip = true;
+    protected boolean nextStrip = false; // menus (Home, Music, Settings) turn it on
 
     public ListScreen() {
     }
@@ -82,6 +82,11 @@ public class ListScreen extends Screen {
     @Override
     public boolean wantsNextStrip() {
         return nextStrip;
+    }
+
+    public void setEmpty(String title, String sub) {
+        emptyTitle = title;
+        emptySub = sub != null ? sub : "";
     }
 
     public void setRows(List<Row> r) {
