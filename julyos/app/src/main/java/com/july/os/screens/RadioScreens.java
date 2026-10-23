@@ -226,8 +226,11 @@ public final class RadioScreens {
             if (dj()) { drawDj(c, d, top, bottom); return; }
             float x = Frame.PAD_X, y = top + Frame.PAD_T, size = 214f;
             d.fill(c, x, y, x + size, y + size, d.hair);
-            Bitmap b = now != null ? JulyImages.get(now.artUrl(), this) : null;
+            // B1: the art box is the song's own cover only — never the show image (that belongs
+            // to the ON AIR column). No cover yet → a quiet placeholder.
+            Bitmap b = now != null && now.art.length() > 0 ? JulyImages.get(now.art, this) : null;
             if (b != null) d.image(c, b, x, y, x + size, y + size);
+            else d.icon(c, Icons.MUSIC, x + size / 2f - 20f, y + (size - 44f) / 2f - 20f, 40f, d.muted, 1.6f);
             d.box(c, x, y, x + size, y + size, d.ink);
             String title = now != null ? now.headline() : JulyRadio.STATION_NAME;
             String sub = now != null ? now.subline() : (st == JulyPlayer.CONNECTING ? "Connecting..." : "24/7 · Nairobi");

@@ -93,7 +93,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         setContentView(view);
         bootAt = SystemClock.uptimeMillis();
         debugKeys = getIntent() != null && getIntent().getBooleanExtra("debugKeys", false);
-        openFromIntent(getIntent());
+        if (getIntent() != null && getIntent().getStringExtra("open") != null) openFromIntent(getIntent());
         push(new HomeScreen());
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
@@ -109,7 +109,15 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     /** Test hook: am start ... --es open songs|albums|artists|music|schedule|live|favs|radio|np|queue|settings. */
     private void openFromIntent(Intent i) {
         String what = i != null ? i.getStringExtra("open") : null;
-        if (what == null) return;
+        if (what == null) {
+            // Home button while July is already running (direct, or forwarded by Solar's home
+            // helper without the HOME category): back to the July home menu.
+            if (i != null && !booting) {
+                popup = null;
+                home();
+            }
+            return;
+        }
         booting = false;
         home();
         Screen s = com.july.os.screens.Debug.screenFor(what);
