@@ -32,6 +32,7 @@ public final class JulyRadio {
     public static final String STATION_NAME = "July Radio";
 
     private static final long POLL_MS = 15000L;
+    private static final long RETRY_MS = 4000L;
     private static final int EAT_OFFSET_MIN = 180; // Africa/Nairobi, UTC+3, no DST
 
     // ---- data model ----
@@ -189,9 +190,9 @@ public final class JulyRadio {
             @Override
             public void run() {
                 while (polling && gen == generation) {
-                    fetchOnce();
+                    Now got = fetchOnce();
                     try {
-                        Thread.sleep(POLL_MS);
+                        Thread.sleep(got == null && latest == null ? RETRY_MS : POLL_MS);
                     } catch (InterruptedException e) {
                         return;
                     }
@@ -216,7 +217,15 @@ public final class JulyRadio {
     static Now fetchOnce() {
         long t0 = System.currentTimeMillis();
         try {
-            byte[] raw = SolarHttp.getBytes(NOW_URL, "application/json", "JulyRadioY1/1.0");
+            byte[] raw;
+            try {
+                raw = SolarHttp.getBytesQuick(NOW_URL, "application/json", "JulyRadioY1/1.0", 6, 10);
+            } catch (Exception tls) {
+                // Old TLS stacks / a wrong device clock break https; the Worker also answers on http.
+                com.solar.launcher.SolarLog.e("July", "now https failed, trying http", tls);
+                raw = SolarHttp.getBytesQuick("http://" + NOW_URL.substring("https://".length()),
+                        "application/json", "JulyRadioY1/1.0", 6, 10);
+            }
             com.solar.launcher.SolarLog.i("July", "now fetch ok " + raw.length + "B in "
                     + (System.currentTimeMillis() - t0) + "ms");
             JSONObject o = new JSONObject(new String(raw, "UTF-8"));

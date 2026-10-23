@@ -3,6 +3,7 @@ package com.solar.launcher.july;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -30,6 +31,7 @@ public final class JulyPlayer {
 
     private static final String TAG = "JulyPlayer";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final long CONNECT_TIMEOUT_MS = 15000L;
 
     private static MediaPlayer player;
     private static volatile int state = IDLE;
@@ -63,8 +65,14 @@ public final class JulyPlayer {
             }
         } catch (Exception ignored) {
         }
-        triedHttp = false;
-        open(ctx.getApplicationContext(), JulyRadio.STREAM_URL);
+        // Android 4.x MediaPlayer often stalls on https without ever erroring; the Y1 goes straight to http.
+        triedHttp = Build.VERSION.SDK_INT < 21;
+        open(ctx.getApplicationContext(), triedHttp ? httpUrl() : JulyRadio.STREAM_URL);
+    }
+
+    private static String httpUrl() {
+        String u = JulyRadio.STREAM_URL;
+        return u.startsWith("https://") ? "http://" + u.substring("https://".length()) : u;
     }
 
     /** Live radio cannot truly pause: stop the stream and reconnect on play. */
@@ -130,6 +138,19 @@ public final class JulyPlayer {
             });
             mp.setDataSource(url);
             mp.prepareAsync();
+            SolarLog.i(TAG, "connecting " + url);
+            // prepareAsync has no timeout of its own; never sit on "Connecting" forever.
+            final MediaPlayer watched = mp;
+            MAIN.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (JulyPlayer.class) {
+                        if (player == watched && state == CONNECTING) {
+                            fail(app, "connect timeout url=" + url, null);
+                        }
+                    }
+                }
+            }, CONNECT_TIMEOUT_MS);
         } catch (Exception e) {
             fail(app, "open failed", e);
         }
@@ -140,7 +161,7 @@ public final class JulyPlayer {
         if (!triedHttp && JulyRadio.STREAM_URL.startsWith("https://")) {
             triedHttp = true;
             releasePlayerOnly();
-            open(app, "http://" + JulyRadio.STREAM_URL.substring("https://".length()));
+            open(app, httpUrl());
             return;
         }
         release();

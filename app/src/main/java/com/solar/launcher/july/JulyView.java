@@ -485,7 +485,8 @@ public final class JulyView extends View {
         box(c, 16f, top, 464f, top + 108f, ink);
         JulyRadio.Show sh = now != null ? now.show : null;
         if (sh == null) {
-            text(c, "NOTHING SCHEDULED RIGHT NOW", 30f, top + 58f, tfMed, 12f, muted, 0.5f);
+            text(c, now == null ? "LOADING SCHEDULE..." : "NOTHING SCHEDULED RIGHT NOW",
+                    30f, top + 58f, tfMed, 12f, muted, 0.5f);
         } else {
             art(c, sh.image, 28f, top + 12f, 84f, ink);
             float tx = 126f;
