@@ -52,10 +52,6 @@ public final class RadioExperiment {
      */
     public static boolean isBlockedScreenState(int state, SharedPreferences prefs) {
         if (!isRadioScreenState(state)) return false;
-        // July Radio rides the Radio hub screen slot and must work without the debug switch.
-        if (state == MediaSuiteHost.STATE_RADIO && com.solar.launcher.july.JulyRadio.isHubActive()) {
-            return false;
-        }
         return !isEnabled(prefs);
     }
 

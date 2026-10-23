@@ -34,8 +34,6 @@ public final class HomeMenuConfig {
     public static final String ID_RADIO = "radio";
     public static final String ID_PC_UPLOAD = "pc_upload";
     public static final String ID_PODCASTS = "podcasts";
-    /** July Radio — live stream, what's on, favourites. */
-    public static final String ID_JULY = "july_radio";
     public static final String ID_SOULSEEK = "soulseek";
     /**
      * 2026-07-15 — Legacy home id; schema 8 removes from home. Kept for prefs cleanup / connectivity id.
@@ -65,7 +63,7 @@ public final class HomeMenuConfig {
      * Was: pc_upload, podcasts, soulseek, themes, apps. Reversal: restore that list.
      */
     private static final List<String> SOLAR_HOME_EXTRAS = Arrays.asList(
-            ID_JULY, ID_PC_UPLOAD, ID_PODCASTS, ID_SOULSEEK, ID_THEMES, ID_APPS);
+            ID_PC_UPLOAD, ID_PODCASTS, ID_SOULSEEK, ID_THEMES, ID_APPS);
 
     /**
      * Default enabled home shortcuts (coming-soon opt-in items omitted).
@@ -74,7 +72,7 @@ public final class HomeMenuConfig {
      * Was: np, music, radio, bt, settings, pc_upload, podcasts, soulseek.
      */
     private static final String DEFAULT_ORDER = String.join(",",
-            ID_NOW_PLAYING, ID_JULY, ID_MUSIC, ID_RADIO, ID_SETTINGS,
+            ID_NOW_PLAYING, ID_MUSIC, ID_RADIO, ID_SETTINGS,
             ID_PC_UPLOAD, ID_PODCASTS, ID_SOULSEEK);
 
     /**
@@ -272,7 +270,6 @@ public final class HomeMenuConfig {
             new Entry(ID_BLUETOOTH, R.string.home_menu_bluetooth, "bluetooth", R.drawable.bluetooth_circle, null, false),
             new Entry(ID_SETTINGS, R.string.home_menu_settings, "settings", R.drawable.setting_circle, null, true),
             new Entry(ID_RADIO, R.string.home_menu_radio, "fm", R.drawable.radio_circle, "Radio", false),
-            new Entry(ID_JULY, R.string.home_menu_july, null, R.drawable.radio_circle, "July Radio", false),
             new Entry(ID_PC_UPLOAD, R.string.home_menu_pc_upload, null, R.drawable.file_sync, "PC Upload", false),
             new Entry(ID_PODCASTS, R.string.home_menu_podcasts, null, R.drawable.music_list, "Podcasts", false),
             // Legacy id kept findable for prefs cleanup; not in SOLAR_HOME_EXTRAS / editor.

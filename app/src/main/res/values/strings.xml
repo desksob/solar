@@ -1973,26 +1973,4 @@ Press Back to cancel and restore the original order.</string>
     <string name="settings_debug_advanced_debugging_hint">Enables debugging instrumentation only when USB/PC is connected</string>
     <string name="context_action_add_fm_to_library">Add to Music Library</string>
     <string name="fm_recording_added_to_library">Added to Music Library: %1$s</string>
-
-    <!-- July Radio -->
-    <string name="home_menu_july">July Radio</string>
-    <string name="status_july">July Radio</string>
-    <string name="july_row_live">Listen live</string>
-    <string name="july_row_schedule">On air + schedule</string>
-    <string name="july_row_favourites">Favourites</string>
-    <string name="july_offline">Connect your Y1 to the internet</string>
-    <string name="july_back">Back</string>
-    <string name="july_on_air_now">ON AIR NOW</string>
-    <string name="july_up_next">UP NEXT</string>
-    <string name="july_times_local">Times in your local time</string>
-    <string name="july_nothing_on">Nothing scheduled right now</string>
-    <string name="july_loading">Loading…</string>
-    <string name="july_no_favourites">No saved songs yet. Hold OK on Now Playing to save one.</string>
-    <string name="july_clear_favourites">Clear all favourites</string>
-    <string name="july_ctx_save">Save song to favourites</string>
-    <string name="july_ctx_remove">Remove from favourites</string>
-    <string name="july_fav_saved">Saved to favourites</string>
-    <string name="july_fav_removed">Removed from favourites</string>
-    <string name="july_nothing_playing">Nothing to save yet</string>
-    <string name="july_play_error">Could not start July Radio</string>
 </resources>

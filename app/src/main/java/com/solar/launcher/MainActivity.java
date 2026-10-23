@@ -12798,15 +12798,7 @@ public class MainActivity extends Activity {
             openScreenWithReturn(STATE_BLUETOOTH);
         } else if (HomeMenuConfig.ID_SETTINGS.equals(id)) {
             changeScreen(STATE_SETTINGS);
-        } else if (HomeMenuConfig.ID_JULY.equals(id)) {
-            // July Radio — hub works offline (favourites); live parts say "connect to the internet".
-            if (mediaSuite == null) return;
-            if (!hasInternetConnection()) {
-                Toast.makeText(this, getString(R.string.july_offline), Toast.LENGTH_LONG).show();
-            }
-            mediaSuite.openJulyHub();
         } else if (HomeMenuConfig.ID_RADIO.equals(id) || HomeMenuConfig.ID_FM.equals(id)) {
-            if (mediaSuite != null) mediaSuite.clearJulyHub(); // July Radio: leave July mode first
             // 2026-07-16 — Radio/FM behind Debug experiment (off by default).
             if (!com.solar.launcher.radio.RadioExperiment.isEnabled(prefs)) {
                 Toast.makeText(this, getString(R.string.settings_debug_radio_experiment_hint),
@@ -31254,7 +31246,6 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
         }
         addYouTubeContextActionsIfNeeded();
         addRadioNetBrowseContextActionsIfNeeded();
-        addJulyNowPlayingContextActionsIfNeeded();
         if (currentScreenState == STATE_SOULSEEK && soulseekUiMode == SOULSEEK_UI_DOWNLOAD) {
             addContextAction(getString(R.string.context_action_cancel_download), new Runnable() {
                 @Override
@@ -50449,27 +50440,6 @@ if (OverlayKeyGate.isOverlayNavigationKey(code) || Y1InputKeys.isBackKey(code)) 
                 }
             }
         });
-    }
-
-    /**
-     * July Radio — Save / remove the song now playing (hold OK on Now Playing, then pick it).
-     * Layman: the "heart" for July's live stream. Technical: JulyFavorites via MediaSuiteHost.
-     * Reversal: delete this method and its call site.
-     */
-    private void addJulyNowPlayingContextActionsIfNeeded() {
-        if (mediaSuite == null || currentScreenState != STATE_PLAYER) return;
-        if (!mediaSuite.isJulyPlaying()) return;
-        boolean saved = mediaSuite.isJulyCurrentSaved();
-        addContextAction(getString(saved ? R.string.july_ctx_remove : R.string.july_ctx_save),
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        int r = mediaSuite.toggleJulyFavorite();
-                        int msg = r < 0 ? R.string.july_nothing_playing
-                                : (r == 1 ? R.string.july_fav_saved : R.string.july_fav_removed);
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
-                    }
-                });
     }
 
     /** Long Back/OK context — open/play/save focused or now-playing YouTube row. */

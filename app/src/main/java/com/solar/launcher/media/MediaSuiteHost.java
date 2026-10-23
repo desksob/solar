@@ -622,11 +622,7 @@ public final class MediaSuiteHost {
         switch (state) {
             case STATE_RADIO:
                 radioSubMode = RADIO_UI_HUB;
-                if (julyHubMode) {
-                    buildJulyHubUi();
-                } else {
-                    buildRadioHubUi();
-                }
+                buildRadioHubUi();
                 break;
             case STATE_RADIO_FM_BROWSE:
                 radioSubMode = RADIO_UI_HUB;
@@ -720,7 +716,7 @@ public final class MediaSuiteHost {
     public String statusTitleForState(int state) {
         switch (state) {
             case STATE_RADIO:
-                return host.getString(julyHubMode ? R.string.status_july : R.string.status_radio);
+                return host.getString(R.string.status_radio);
             case STATE_RADIO_FM_BROWSE:
                 return host.getString(R.string.status_radio_fm);
             case STATE_RADIO_FM_PLAYER:
@@ -868,15 +864,6 @@ public final class MediaSuiteHost {
                     DebugAgentLog.log(host.context(), "MediaSuiteHost.handleBack", "radio root back", "H-BACK", d);
                 } catch (Exception ignored) {}
                 // #endregion
-                // July Radio — hub sub-lists go back one level; root clears the July flag.
-                if (julyHubMode) {
-                    if (julySub != JULY_SUB_HUB) {
-                        julySub = JULY_SUB_HUB;
-                        buildJulyHubUi();
-                        return true;
-                    }
-                    clearJulyHub();
-                }
                 host.exitToHomeMenu();
                 return true;
             default:
@@ -916,250 +903,6 @@ public final class MediaSuiteHost {
                 host.changeScreen(STATE_RADIO);
                 return true;
         }
-    }
-
-    // --- July Radio (hub, stream, Now Playing hooks, favourites) ---
-
-    private static final int JULY_SUB_HUB = 0;
-    private static final int JULY_SUB_SCHEDULE = 1;
-    private static final int JULY_SUB_FAVOURITES = 2;
-    private static final String[] JULY_DAYS = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-    private boolean julyHubMode = false;
-    private int julySub = JULY_SUB_HUB;
-    private com.solar.launcher.july.JulyFavorites julyFavorites;
-    private int julyArtGen = 0;
-    private String julyArtShownUrl = "";
-    private boolean julyArtPlaceholderSet = false;
-
-    private final com.solar.launcher.july.JulyRadio.Listener julyListener =
-            new com.solar.launcher.july.JulyRadio.Listener() {
-                @Override
-                public void onJulyNow(com.solar.launcher.july.JulyRadio.Now now) {
-                    if (julyHubMode && julySub == JULY_SUB_SCHEDULE
-                            && host.getCurrentScreenState() == STATE_RADIO) {
-                        buildJulyHubUi();
-                    }
-                    if (isJulyPlaying()) {
-                        bindRadioNowPlayingUi();
-                    } else if (!julyHubMode) {
-                        com.solar.launcher.july.JulyRadio.stopPolling();
-                    }
-                }
-            };
-
-    private com.solar.launcher.july.JulyFavorites julyFavs() {
-        if (julyFavorites == null) {
-            julyFavorites = new com.solar.launcher.july.JulyFavorites(host.context());
-        }
-        return julyFavorites;
-    }
-
-    private static boolean isJulyItem(PlayQueue.QueueItem item) {
-        return item != null
-                && com.solar.launcher.july.JulyRadio.STATION_UUID.equals(item.radioStationUuid);
-    }
-
-    /** True while the current radio item is the July stream. */
-    public boolean isJulyPlaying() {
-        PlaybackCoordinator pb = host.playback();
-        return pb != null && pb.isInternetRadioActive() && isJulyItem(pb.unifiedQueue().current());
-    }
-
-    /** Home menu entry: open the July hub (Listen live / On air / Favourites). */
-    public void openJulyHub() {
-        julyHubMode = true;
-        julySub = JULY_SUB_HUB;
-        com.solar.launcher.july.JulyRadio.setHubActive(true);
-        host.changeScreen(STATE_RADIO);
-    }
-
-    /** Leave July mode so the regular Radio hub shows normally again. */
-    public void clearJulyHub() {
-        julyHubMode = false;
-        julySub = JULY_SUB_HUB;
-        com.solar.launcher.july.JulyRadio.setHubActive(false);
-    }
-
-    /** Start the July stream through the shared internet radio player and open Now Playing. */
-    public void startJulyStation() {
-        if (!host.requireInternet(R.string.july_offline)) return;
-        stopOtherRadioPlayback(false);
-        host.stopNonFmPlayback();
-        String url = com.solar.launcher.july.JulyRadio.STREAM_URL;
-        try {
-            internetRadioPlayer.play(url);
-        } catch (Exception e) {
-            Toast.makeText(host.context(), R.string.july_play_error, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        host.playback().startRadioStation(PlayQueue.QueueItem.internetRadio(
-                com.solar.launcher.july.JulyRadio.STATION_UUID,
-                com.solar.launcher.july.JulyRadio.STATION_NAME,
-                url, "24/7 · Nairobi", ""));
-        julyArtShownUrl = "";
-        julyArtPlaceholderSet = false;
-        com.solar.launcher.july.JulyRadio.startPolling(julyListener);
-        host.changeScreen(STATE_PLAYER);
-        host.refreshPlayerUi();
-    }
-
-    /** True when the song now playing on July is already in favourites. */
-    public boolean isJulyCurrentSaved() {
-        com.solar.launcher.july.JulyRadio.Now n = com.solar.launcher.july.JulyRadio.latest();
-        return n != null && !n.isDjSet() && n.title.length() > 0
-                && julyFavs().isSaved(n.title, n.artist);
-    }
-
-    /** Heart toggle: 1 = saved, 0 = removed, -1 = nothing to save (no track / DJ set). */
-    public int toggleJulyFavorite() {
-        com.solar.launcher.july.JulyRadio.Now n = com.solar.launcher.july.JulyRadio.latest();
-        if (n == null || n.isDjSet() || n.title.length() == 0) return -1;
-        return julyFavs().toggle(n.title, n.artist, n.album, n.art) ? 1 : 0;
-    }
-
-    private void buildJulyHubUi() {
-        prepareScrollBrowse();
-        host.applyReachBrowseLayoutMode();
-        host.showReachBrowseList(false);
-        host.setBrowserStatusTitle(host.getString(R.string.status_july));
-        addBackRow(host.getString(julySub == JULY_SUB_HUB
-                ? R.string.radio_back_home : R.string.july_back));
-
-        if (julySub == JULY_SUB_SCHEDULE) {
-            buildJulyScheduleRows();
-        } else if (julySub == JULY_SUB_FAVOURITES) {
-            buildJulyFavouriteRows();
-        } else {
-            addActionRow(host.getString(R.string.july_row_live), new Runnable() {
-                @Override
-                public void run() {
-                    startJulyStation();
-                }
-            });
-            addActionRow(host.getString(R.string.july_row_schedule), new Runnable() {
-                @Override
-                public void run() {
-                    julySub = JULY_SUB_SCHEDULE;
-                    if (host.requireInternet(R.string.july_offline)) {
-                        com.solar.launcher.july.JulyRadio.startPolling(julyListener);
-                    }
-                    buildJulyHubUi();
-                }
-            });
-            addActionRow(host.getString(R.string.july_row_favourites), new Runnable() {
-                @Override
-                public void run() {
-                    julySub = JULY_SUB_FAVOURITES;
-                    buildJulyHubUi();
-                }
-            });
-        }
-        focusFirstBrowserChild();
-    }
-
-    private void buildJulyScheduleRows() {
-        com.solar.launcher.july.JulyRadio.Now n = com.solar.launcher.july.JulyRadio.latest();
-        if (n == null) {
-            addStatusRow(host.getString(com.solar.launcher.ConnectivityHelper.isOnline(host.context())
-                    ? R.string.july_loading : R.string.july_offline));
-            return;
-        }
-        addStatusRow(host.getString(R.string.july_on_air_now));
-        if (n.show != null) {
-            addStatusRow(n.show.name + "  " + n.show.localTimes());
-            if (n.show.host.length() > 0) addStatusRow(n.show.host);
-        } else {
-            addStatusRow(host.getString(R.string.july_nothing_on));
-        }
-        if (!n.next.isEmpty()) {
-            addStatusRow(host.getString(R.string.july_up_next));
-            for (com.solar.launcher.july.JulyRadio.Show s : n.next) {
-                String day = (n.show == null || s.day != n.show.day)
-                        && s.day >= 0 && s.day < JULY_DAYS.length ? JULY_DAYS[s.day] + " " : "";
-                addStatusRow(day + com.solar.launcher.july.JulyRadio.toLocal(s.start) + "  " + s.name);
-            }
-        }
-        addStatusRow(host.getString(R.string.july_times_local));
-    }
-
-    private void buildJulyFavouriteRows() {
-        final java.util.List<com.solar.launcher.july.JulyFavorites.Item> favs = julyFavs().list();
-        if (favs.isEmpty()) {
-            addStatusRow(host.getString(R.string.july_no_favourites));
-            return;
-        }
-        for (final com.solar.launcher.july.JulyFavorites.Item it : favs) {
-            String label = it.artist.length() > 0 ? it.title + " — " + it.artist : it.title;
-            addActionRow(label, new Runnable() {
-                @Override
-                public void run() {
-                    String line = it.album.length() > 0 ? it.artist + " · " + it.album : it.artist;
-                    Toast.makeText(host.context(), line, Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-        addActionRow(host.getString(R.string.july_clear_favourites), new Runnable() {
-            @Override
-            public void run() {
-                julyFavs().clear();
-                buildJulyHubUi();
-            }
-        });
-    }
-
-    /** Load the track / show art into Now Playing (guarded so a slow download cannot overwrite a newer one). */
-    private void bindJulyArt(com.solar.launcher.july.JulyRadio.Now jn) {
-        final String url = jn != null ? jn.artUrl() : "";
-        android.widget.ImageView albumArt = host.findViewById(R.id.iv_album_art);
-        if (albumArt == null) return;
-        if (url.length() == 0) {
-            if (!julyArtPlaceholderSet) {
-                albumArt.setImageResource(R.drawable.radio_fm_np_placeholder);
-                albumArt.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-                julyArtPlaceholderSet = true;
-                julyArtShownUrl = "";
-            }
-            return;
-        }
-        if (url.equals(julyArtShownUrl)) return;
-        julyArtShownUrl = url;
-        julyArtPlaceholderSet = false;
-        final int gen = ++julyArtGen;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Bitmap bmp = null;
-                try {
-                    byte[] raw = com.solar.launcher.net.SolarHttp.getBytes(url);
-                    BitmapFactory.Options bounds = new BitmapFactory.Options();
-                    bounds.inJustDecodeBounds = true;
-                    BitmapFactory.decodeByteArray(raw, 0, raw.length, bounds);
-                    int sample = 1;
-                    while (bounds.outWidth / (sample * 2) >= 480) sample *= 2;
-                    BitmapFactory.Options opts = new BitmapFactory.Options();
-                    opts.inSampleSize = sample;
-                    bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length, opts);
-                } catch (Exception ignored) {
-                }
-                final Bitmap result = bmp;
-                if (result == null) {
-                    julyArtShownUrl = "";
-                    return;
-                }
-                host.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (gen != julyArtGen) return;
-                        android.widget.ImageView v = host.findViewById(R.id.iv_album_art);
-                        if (v != null) {
-                            v.setImageBitmap(result);
-                            v.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-                        }
-                    }
-                });
-            }
-        }, "july-art").start();
     }
 
     // --- Radio hub ---
@@ -3371,23 +3114,6 @@ public final class MediaSuiteHost {
                 artistText = host.getString(R.string.status_radio_internet);
             }
             showPause = !internetRadioPlayer.isPlaying();
-            // July Radio — live song / show from the Worker replaces the generic station lines.
-            if (isJulyItem(cur)) {
-                com.solar.launcher.july.JulyRadio.Now jn = com.solar.launcher.july.JulyRadio.latest();
-                if (jn != null) {
-                    titleText = jn.headline();
-                    artistText = jn.subline();
-                    if (!jn.isDjSet() && jn.album.length() > 0) {
-                        albumText = jn.album;
-                    } else if (jn.show != null) {
-                        albumText = jn.show.name;
-                    }
-                    if (jn.show != null) {
-                        trackCountText = host.getString(R.string.july_on_air_now) + ": " + jn.show.name;
-                    }
-                }
-                bindJulyArt(jn);
-            }
         }
 
         setTextIfChanged(title, titleText);
@@ -6200,7 +5926,6 @@ public final class MediaSuiteHost {
     public void release() {
         netLoadGen++;
         stopFmRdsPolling();
-        com.solar.launcher.july.JulyRadio.stopPolling();
         fmEngine.release();
         internetRadioPlayer.stop();
         releaseVideoPlayer();
