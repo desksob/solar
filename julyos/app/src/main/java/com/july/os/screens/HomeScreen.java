@@ -29,12 +29,13 @@ public final class HomeScreen extends ListScreen {
         List<Row> r = new ArrayList<Row>();
         Track cur = pl.current();
         final com.july.os.spoken.Spoken sp = com.july.os.spoken.Spoken.get();
-        String npValue = JulyPlayer.isActive() ? "July Radio" : sp.active() ? sp.item().title : (cur != null ? cur.title : "");
+        String npValue = JulyPlayer.isActive() ? "July Radio" : com.july.os.fm.Fm.isOn() ? "FM " + com.july.os.fm.Fm.mhz(com.july.os.fm.Fm.get().khz()) : sp.active() ? sp.item().title : (cur != null ? cur.title : "");
         r.add(new Row(Icons.PLAY, "Now Playing").value(npValue).on(new Runnable() {
             @Override
             public void run() {
                 if (JulyPlayer.isActive()) shell.push(new RadioScreens.Live());
                 else if (sp.active()) shell.push(new SpokenScreens.Player(null));
+                else if (com.july.os.fm.Fm.isOn()) shell.push(new NetRadioScreens.Tuner());
                 else if (pl.hasQueue()) shell.push(new NowPlayingScreen());
                 else shell.toast(Icons.MUSIC, "Nothing playing yet");
             }
@@ -81,8 +82,18 @@ public final class HomeScreen extends ListScreen {
                 shell.push(new SpokenScreens.BooksMenu());
             }
         }));
-        r.add(new Row(Icons.RADIO, "FM Radio").chevron().on(coming("FM Radio")));
-        r.add(new Row(Icons.GLOBE, "Internet radio").chevron().on(coming("Internet radio")));
+        r.add(new Row(Icons.RADIO, "FM Radio").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new NetRadioScreens.Tuner());
+            }
+        }));
+        r.add(new Row(Icons.GLOBE, "Internet radio").chevron().on(new Runnable() {
+            @Override
+            public void run() {
+                shell.push(new NetRadioScreens.Menu());
+            }
+        }));
         r.add(new Row(Icons.DOWNLOAD, "Get Music").chevron().on(coming("Get Music")));
         r.add(new Row(Icons.GRID, "Apps").chevron().on(coming("Apps")));
         r.add(new Row(Icons.GEAR, "Settings").chevron().on(new Runnable() {

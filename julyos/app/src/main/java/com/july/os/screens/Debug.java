@@ -35,6 +35,11 @@ public final class Debug {
         if ("books".equals(name)) return new SpokenScreens.BooksMenu();
         if ("booklist".equals(name)) return new SpokenScreens.BookList();
         if ("podsearch".equals(name)) return new SpokenScreens.SearchResults("radio");
+        if ("netradio".equals(name)) return new NetRadioScreens.Menu();
+        if ("radiogenres".equals(name)) return new NetRadioScreens.Genres();
+        if ("stations".equals(name)) return new NetRadioScreens.StationList("Browse · jazz", "tag:jazz");
+        if ("fm".equals(name)) return new NetRadioScreens.Tuner();
+        if ("fmpresets".equals(name)) return new NetRadioScreens.Presets();
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

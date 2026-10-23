@@ -407,15 +407,21 @@ public final class SpokenScreens {
             return it != null && it.book;
         }
 
+        private boolean live() {
+            Spoken.Item it = Spoken.get().item();
+            return it != null && it.live;
+        }
+
         @Override
         public String title() {
-            return book() ? "Audiobook" : "Podcast";
+            return live() ? "Internet Radio" : book() ? "Audiobook" : "Podcast";
         }
 
         @Override
         public String sectionRight() {
             Spoken.Item it = Spoken.get().item();
             if (it == null) return "";
+            if (it.live) return "Live";
             if (it.book) {
                 Books.Book b = Books.byKey(it.key);
                 if (b == null) return "";
@@ -430,6 +436,7 @@ public final class SpokenScreens {
 
         @Override
         public String[][] hints() {
+            if (live()) return new String[][]{{"Center", "Pause"}, {"Hold", "Save"}, {"Menu", "Back"}};
             if (book()) return new String[][]{{"Center", "Pause"}, {"Hold", "Bookmark"}, {"Menu", "Back"}};
             return new String[][]{{"Center", "Pause"}, {"Left/Right", "Skip 30s"}, {"Hold", "Speed"}};
         }
@@ -472,7 +479,13 @@ public final class SpokenScreens {
                     shell.volume(k == Key.UP ? 1 : -1);
                     return true;
                 case CENTER_LONG:
-                    if (book()) {
+                    if (live()) {
+                        com.july.os.radio.Stations.Station st = NetRadioScreens.playing;
+                        if (st != null) {
+                            boolean saved = com.july.os.radio.Stations.toggleMine(st);
+                            shell.toast(Icons.STAR, saved ? "Saved to My stations" : "Removed from My stations");
+                        }
+                    } else if (book()) {
                         Spoken.Item it = sp.item();
                         Books.Book b = Books.byKey(it.key);
                         int ch = b != null ? b.chapterAt(sp.part(), sp.position()) : 0;
@@ -571,12 +584,22 @@ public final class SpokenScreens {
                 dur = b != null ? b.totalMs() : sp.duration();
                 int ch = b != null ? b.chapterAt(sp.part(), sp.position()) : 0;
                 info = "Chapter " + (ch + 1) + (dur > 0 ? " · " + minutes((dur - pos) / 1000) + " left" : "");
+            } else if (it.live) {
+                pos = 0;
+                dur = 0;
+                info = it.info;
             } else {
                 pos = sp.position();
                 dur = sp.duration();
                 info = "Speed 1.0x";
             }
             d.text(c, d.fit(Draw.up(info), w, d.med, 10f, Draw.em(10f, 0.08f)), x, y + 150f - 2f, d.med, 10f, d.ink, Draw.em(10f, 0.08f));
+            if (it.live) {
+                float pb = bottom - Frame.PAD_B - 18f;
+                d.solidPill(c, sp.state() == Spoken.PLAYING ? "Live" : sp.state() == Spoken.LOADING ? "Connecting" : "Paused",
+                        l, pb + 9f, 11f, d.ink, d.bg);
+                return;
+            }
             // progress
             float pb = bottom - Frame.PAD_B - 12f - 6f - 6f;
             d.fill(c, l, pb, Draw.W - Frame.PAD_X, pb + 6f, d.hair);

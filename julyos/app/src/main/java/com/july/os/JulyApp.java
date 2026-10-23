@@ -36,6 +36,7 @@ public final class JulyApp extends Application {
             public void run() {
                 if (JulyPlayer.isActive()) JulyPlayer.stop();
                 com.july.os.spoken.Spoken.get().pause();
+                com.july.os.fm.Fm.stopIfOn();
             }
         });
         library.load();

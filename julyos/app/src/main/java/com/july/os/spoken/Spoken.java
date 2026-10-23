@@ -32,6 +32,8 @@ public final class Spoken {
         public long[] partMs;        // durations when known (books)
         public String cover;         // file path or URL
         public boolean book;
+        public boolean live;         // internet radio: no resume, no seeking
+        public String info = "";     // live: "128 kbps · Jazz"
 
         public Item(String key, String title, String sub) {
             this.key = key;
@@ -128,7 +130,8 @@ public final class Spoken {
         part = Math.max(0, Math.min(partIndex, it.parts.size() - 1));
         JulyApp.get().player().pause();
         if (JulyPlayer.isActive()) JulyPlayer.stop();
-        prefs().edit().putString("sp_last" + (it.book ? "_book" : "_pod"), it.key).apply();
+        com.july.os.fm.Fm.stopIfOn();
+        if (!it.live) prefs().edit().putString("sp_last" + (it.book ? "_book" : "_pod"), it.key).apply();
         open(ms);
     }
 
@@ -193,6 +196,7 @@ public final class Spoken {
         } else {
             JulyApp.get().player().pause();
             if (JulyPlayer.isActive()) JulyPlayer.stop();
+            com.july.os.fm.Fm.stopIfOn();
             mp.start();
             set(PLAYING);
             main.postDelayed(saver, 10000);
@@ -226,7 +230,7 @@ public final class Spoken {
 
     /** Skip within the current part; crosses into the previous/next part of a book. */
     public void seekBy(int ms) {
-        if (mp == null || !prepared) return;
+        if (mp == null || !prepared || item.live) return;
         int to = position() + ms, d = duration();
         if (to < 0 && part > 0) {
             part--;
@@ -263,7 +267,7 @@ public final class Spoken {
     }
 
     private void save() {
-        if (item == null || mp == null || !prepared) return;
+        if (item == null || mp == null || !prepared || item.live) return;
         int pos = position();
         prefs().edit().putString("sp:" + item.key, part + ":" + pos).remove("spdone:" + item.key).apply();
     }
