@@ -48,6 +48,16 @@ public final class Debug {
         if ("sleep".equals(name)) return new SettingsMore.Sleep();
         if ("updates".equals(name)) return new SettingsMore.Updates();
         if ("usb".equals(name)) return new SettingsMore.Usb();
+        if ("apps".equals(name)) return new AppsScreens.Menu();
+        if ("calc".equals(name)) return new AppsScreens.Calculator();
+        if ("clock".equals(name)) return new AppsScreens.Clock();
+        if ("notes".equals(name)) return new AppsScreens.Notes();
+        if ("files".equals(name)) return new AppsScreens.Files();
+        if ("recorder".equals(name)) return new AppsScreens.Recorder();
+        if ("mix".equals(name)) return new MixScreens.Menu();
+        if ("stems".equals(name)) return new MixScreens.StemList();
+        if ("search".equals(name)) return new MusicScreens.SearchResults("love");
+        if ("recent".equals(name)) return new MusicScreens.TrackList("Recently added", 0);
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

@@ -134,10 +134,33 @@ public final class MusicScreens {
                     shell.push(new Folders(Environment.getExternalStorageDirectory()));
                 }
             }));
+            r.add(new Row(Icons.PLUS, "Recently added").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    shell.push(new TrackList("Recently added", TrackList.RECENT));
+                }
+            }));
+            r.add(new Row(Icons.HEART, "Favourites").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    shell.push(new TrackList("Favourites", TrackList.FAVS));
+                }
+            }));
             r.add(new Row(Icons.SEARCH, "Search").chevron().on(new Runnable() {
                 @Override
                 public void run() {
-                    shell.push(new ComingScreen("Search"));
+                    shell.push(new TextEntry("Search · Music", "", "Search songs, artists, albums", null, false, new TextEntry.Done() {
+                        @Override
+                        public void onText(String text) {
+                            if (text.trim().length() > 0) shell.replace(new SearchResults(text.trim()));
+                        }
+                    }));
+                }
+            }));
+            r.add(new Row(Icons.DISC, "Mix").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    shell.push(new MixScreens.Menu());
                 }
             }));
             setRows(r);
@@ -331,5 +354,96 @@ public final class MusicScreens {
 
     static <T> List<T> list(T... a) {
         return new ArrayList<T>(Arrays.asList(a));
+    }
+
+    // ---- C10 · search results ----
+
+    public static final class SearchResults extends ListScreen {
+        private final String q;
+
+        public SearchResults(String q) {
+            super("Search · " + q, LIBRARY, 44f);
+            this.q = q;
+            setEmpty("Nothing found", q);
+        }
+
+        @Override
+        public void onShow() {
+            final List<Track> found = com.july.os.JulyApp.get().library().search(q);
+            List<Row> r = new ArrayList<Row>();
+            for (int i = 0; i < found.size(); i++) {
+                final int at = i;
+                final Track t = found.get(i);
+                r.add(new Row(0, t.title).sub(t.artist + " · " + t.album).value(Track.time(t.durationMs)).on(new Runnable() {
+                    @Override
+                    public void run() {
+                        com.july.os.JulyApp.get().player().play(found, at);
+                        shell.push(new NowPlayingScreen());
+                    }
+                }).onLong(new Runnable() {
+                    @Override
+                    public void run() {
+                        songOptions(shell, t);
+                    }
+                }));
+            }
+            setRows(r);
+        }
+    }
+
+    // ---- C2 · Recently added / Favourites ----
+
+    public static final class TrackList extends ListScreen {
+        static final int RECENT = 0, FAVS = 1;
+        private final int kind;
+        private List<Track> recent;
+
+        TrackList(String title, int kind) {
+            super(title, LIBRARY, 44f);
+            this.kind = kind;
+            setEmpty(kind == FAVS ? "No favourites yet" : "Nothing here yet", kind == FAVS ? "Heart a song on Now Playing" : "");
+        }
+
+        @Override
+        public void onShow() {
+            final com.july.os.media.Player pl = JulyApp.get().player();
+            List<Track> all = JulyApp.get().library().songs();
+            final List<Track> list = new ArrayList<Track>();
+            if (kind == FAVS) {
+                for (Track t : all) if (pl.isHearted(t)) list.add(t);
+            } else {
+                if (recent == null) {
+                    setEmpty("Loading", "");
+                    final List<Track> copy = new ArrayList<Track>(all);
+                    final android.os.Handler h = new android.os.Handler();
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            final java.util.Map<String, Long> mt = new java.util.HashMap<String, Long>();
+                            for (Track t : copy) mt.put(t.path, new java.io.File(t.path).lastModified());
+                            java.util.Collections.sort(copy, new java.util.Comparator<Track>() {
+                                @Override
+                                public int compare(Track a, Track b) {
+                                    return mt.get(b.path).compareTo(mt.get(a.path));
+                                }
+                            });
+                            h.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    recent = new ArrayList<Track>(copy.subList(0, Math.min(200, copy.size())));
+                                    setEmpty("Nothing here yet", "");
+                                    onShow();
+                                }
+                            });
+                        }
+                    }, "july-recent").start();
+                    return;
+                }
+                list.addAll(recent);
+            }
+            List<Row> r = new ArrayList<Row>();
+            for (int i = 0; i < list.size(); i++) r.add(songRow(shell, list, i));
+            setRows(r);
+        }
     }
 }
