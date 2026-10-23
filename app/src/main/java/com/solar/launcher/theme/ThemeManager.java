@@ -290,6 +290,10 @@ public class ThemeManager {
         for (File src : kids) {
             if (!src.isDirectory() || src.getName().startsWith(".")) continue;
             if (!new File(src, "config.json").isFile()) continue;
+            // 2026-10-23 — July: an old built-in (Aura) copy on MicroSD must not overwrite the
+            // freshly seeded July Default; only the APK seeds Default. Reversal: drop this check.
+            if (BUILTIN_DEFAULT_FOLDER.equalsIgnoreCase(src.getName())
+                    && !isCurrentBundledDefault(new File(src, "config.json"))) continue;
             File dest = new File(destRoot, src.getName());
             if (!themeFolderNeedsCopy(src, dest)) continue;
             try {
@@ -1004,11 +1008,46 @@ public class ThemeManager {
                 syncBundledThemeBlocks(ctx, dest);
                 copyMissingBundledAssets(ctx, dest);
             }
+            reseedStaleDefaultCopies(ctx, dest);
             // Push fresh cover + Music even when Default already existed (OTA / first-boot seed).
             refreshBundledAuraShowcaseAssets(ctx, dest);
         } catch (Exception ignored) {}
         ensureBundledAssetThemes(ctx);
         ensureBundledFallback(ctx);
+    }
+
+    /**
+     * 2026-10-23 — July: Default also lives on public Internal, MicroSD and filesDir/Themes. Any copy
+     * whose title differs from the APK's is replaced, so the old look cannot come back via sync.
+     */
+    private static void reseedStaleDefaultCopies(Context ctx, File primary) {
+        File[] roots = {
+                com.solar.launcher.DeviceFeatures.getInternalPublicThemesDir(),
+                com.solar.launcher.DeviceFeatures.getMicroSdThemesDir(),
+                internalThemesDir(ctx)
+        };
+        boolean changed = false;
+        for (File root : roots) {
+            if (root == null) continue;
+            File copy = new File(root, BUILTIN_DEFAULT_FOLDER);
+            if (samePath(copy, primary) || !copy.isDirectory()) continue;
+            File cfg = new File(copy, "config.json");
+            if (cfg.isFile() && bundledTitleMatches(ctx, cfg)) continue;
+            try {
+                copyAssetTree(ctx.getAssets(), BUNDLED_ASSET_DIR, copy);
+                changed = true;
+            } catch (Exception ignored) {}
+        }
+        if (changed) {
+            bitmapCache.clear();
+            scaledRowBitmapCache.clear();
+        }
+    }
+
+    /** Sync-thread check (no Context handy): does this Default config carry the bundled title? */
+    private static boolean isCurrentBundledDefault(File cfg) {
+        Context app = assetContext;
+        return app == null || bundledTitleMatches(app, cfg);
     }
 
     /** True when the on-disk Default has the same theme_info.title as the APK's bundled one. */
