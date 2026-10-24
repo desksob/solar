@@ -493,12 +493,9 @@ final class MusicPages {
 
     // ---- A5 · Search with keyboard ----
 
-    static final class Search extends Page {
-        private static final String[] ROWS = {"1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"};
+    static final class Search extends Page implements Keyboard.Keys, Typable {
         private final StringBuilder q = new StringBuilder();
-        private boolean shift;
         private TextView field;
-        private LinearLayout keys;
         private FrameLayout results;
 
         @Override String title() { return "Search"; }
@@ -518,81 +515,27 @@ final class MusicPages {
             page.addView(box, St.top(St.lp(-1, 52), 10));
             results = new FrameLayout(c);
             page.addView(results, St.top(new LinearLayout.LayoutParams(-1, 0, 1f), 8));
-            keys = St.col(c);
-            keys.setGravity(Gravity.CENTER_HORIZONTAL);
-            page.addView(keys, St.top(St.lp(-1, -2), 6));
-            drawKeys();
+            page.addView(new Keyboard(c, this), St.top(St.lp(-1, -2), 6));
             update();
             return page;
         }
 
-        private void drawKeys() {
-            keys.removeAllViews();
-            for (String row : ROWS) {
-                LinearLayout r = St.row(a);
-                for (int i = 0; i < row.length(); i++) {
-                    final String ch = shift ? row.substring(i, i + 1).toUpperCase(Locale.ROOT) : row.substring(i, i + 1);
-                    r.addView(key(ch, false, new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            type(ch);
-                        }
-                    }), St.left(St.lp(54, 40), i == 0 ? 0 : 6));
-                }
-                keys.addView(r, St.top(St.lp(-2, -2), 5));
-            }
-            LinearLayout r = St.row(a);
-            r.addView(key("Shift", shift, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    shift = !shift;
-                    drawKeys();
-                }
-            }), St.lp(108, 40));
-            r.addView(key("Space", false, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    type(" ");
-                }
-            }), St.left(St.lp(234, 40), 6));
-            r.addView(key("Delete", false, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (q.length() > 0) q.setLength(q.length() - 1);
-                    update();
-                }
-            }), St.left(St.lp(108, 40), 6));
-            r.addView(key("Done", true, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    a.back();
-                }
-            }), St.left(St.lp(108, 40), 6));
-            keys.addView(r, St.top(St.lp(-2, -2), 5));
-        }
-
-        private View key(String label, boolean on, View.OnClickListener l) {
-            boolean word = label.length() > 1;
-            TextView t = word ? St.caps(a, label, 11, true, 0.1f, on ? St.bg : St.ink) : St.text(a, label, 16, false, 0f, St.ink);
-            t.setGravity(Gravity.CENTER);
-            t.setBackground(on ? St.box(St.ink, St.ink, 1) : St.box(0, word ? St.ink : St.hair, 1));
-            St.clickable(t, l);
-            return t;
-        }
-
         /** Also fed by a USB keyboard (StationActivity.dispatchKeyEvent). */
-        void type(String s) {
+        @Override
+        public void type(String s) {
             q.append(s);
-            if (shift && s.length() == 1 && Character.isLetter(s.charAt(0))) {
-                shift = false;
-                drawKeys();
-            }
             update();
         }
 
-        void delete() {
+        @Override
+        public void delete() {
             if (q.length() > 0) q.setLength(q.length() - 1);
             update();
+        }
+
+        @Override
+        public void done() {
+            a.back();
         }
 
         private void update() {

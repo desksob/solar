@@ -102,6 +102,119 @@ public final class Printer {
         });
     }
 
+    /** Printer states we tell people about (Sunmi updatePrinterState codes, simplified). */
+    public static final int READY = 0, NO_PAPER = 1, LID_OPEN = 2, HOT = 3, OFFLINE = 4, BUSY = 5;
+
+    /** Live state; Sunmi only senses paper out, never how much is left. */
+    public int status() {
+        SunmiPrinterService p = service;
+        if (p == null) return OFFLINE;
+        try {
+            switch (p.updatePrinterState()) {
+                case 1: return READY;
+                case 2: return BUSY;
+                case 4: return NO_PAPER;
+                case 5: return HOT;
+                case 6: return LID_OPEN;
+                default: return OFFLINE;
+            }
+        } catch (Throwable e) {
+            return OFFLINE;
+        }
+    }
+
+    public static String statusText(int st) {
+        switch (st) {
+            case READY: return "Ready";
+            case NO_PAPER: return "Out of paper";
+            case LID_OPEN: return "Lid open";
+            case HOT: return "Too hot";
+            case BUSY: return "Busy";
+            default: return "Offline";
+        }
+    }
+
+    public void feed() {
+        final SunmiPrinterService p = service;
+        if (p == null) return;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    p.lineWrap(4, null);
+                } catch (Throwable ignored) {
+                }
+            }
+        }, "july-feed").start();
+    }
+
+    /**
+     * A finished receipt picture (receipts.Slip): printed as is, fed and fully cut. Buffered so
+     * {@code done} hears when the paper is out (or why it failed). Background thread.
+     */
+    public void printBitmap(final Bitmap b, final Done done) {
+        final SunmiPrinterService p = service;
+        final Handler main = new Handler(Looper.getMainLooper());
+        if (p == null) {
+            main.post(new Runnable() {
+                @Override
+                public void run() {
+                    done.onDone(false, "Offline");
+                }
+            });
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final int st = status();
+                if (st != READY && st != BUSY) {
+                    main.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            done.onDone(false, statusText(st));
+                        }
+                    });
+                    return;
+                }
+                try {
+                    p.enterPrinterBuffer(true);
+                    p.printerInit(null);
+                    p.setAlignment(1, null);
+                    p.printBitmap(b, null);
+                    p.lineWrap(4, null);
+                    p.sendRAWData(new byte[]{0x1D, 0x56, 0x00}, null);
+                    p.exitPrinterBufferWithCallback(true, new InnerResultCallback() {
+                        private boolean sent;
+
+                        @Override public void onRunResult(boolean ok) { }
+                        @Override public void onReturnString(String s) { }
+                        @Override public void onRaiseException(int code, String msg) { finish(false, msg); }
+                        @Override public void onPrintResult(int code, String msg) { finish(code == 0, msg); }
+
+                        private synchronized void finish(final boolean ok, final String msg) {
+                            if (sent) return;
+                            sent = true;
+                            main.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    done.onDone(ok, ok ? msg : statusText(status()));
+                                }
+                            });
+                        }
+                    });
+                } catch (final Throwable e) {
+                    main.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            done.onDone(false, String.valueOf(e.getMessage()));
+                        }
+                    });
+                }
+            }
+        }, "july-print").start();
+    }
+
     /** Paper width in dots: 384 on 58mm rolls, 576 on 80mm (the T2). */
     public int paperWidth() {
         try {

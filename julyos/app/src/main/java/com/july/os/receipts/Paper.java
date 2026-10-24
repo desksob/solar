@@ -271,7 +271,8 @@ public final class Paper {
     }
 
     private static Paint paint(Typeface tf, float size) {
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint p = new Paint();
+        p.setHinting(Paint.HINTING_ON);
         p.setTypeface(tf);
         p.setTextSize(size);
         p.setColor(Color.BLACK);
@@ -318,29 +319,37 @@ public final class Paper {
         return out;
     }
 
-    /** Square-crop, scale to size x size, Floyd-Steinberg to pure black and white for the thermal head. */
+    private static final int[] BAYER = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
+
+    /**
+     * Square-crop, scale to size x size, stretch the contrast, then an ordered 4x4 dot dither (the
+     * design's "Dots" image style): even, regular texture that thermal heads print cleanly.
+     */
     static Bitmap dither(Bitmap src, int size) {
         int side = Math.min(src.getWidth(), src.getHeight());
         Bitmap sq = Bitmap.createBitmap(src, (src.getWidth() - side) / 2, (src.getHeight() - side) / 2, side, side);
         Bitmap s = Bitmap.createScaledBitmap(sq, size, size, true);
         int[] px = new int[size * size];
         s.getPixels(px, 0, size, 0, 0, size, size);
-        float[] g = new float[px.length];
+        int[] lum = new int[px.length];
+        int[] hist = new int[256];
         for (int i = 0; i < px.length; i++) {
             int c = px[i];
-            g[i] = ((c >> 16) & 0xFF) * 0.3f + ((c >> 8) & 0xFF) * 0.59f + (c & 0xFF) * 0.11f;
+            lum[i] = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
+            hist[lum[i]]++;
         }
+        // ignore the darkest and lightest 2% so one stray pixel doesn't flatten the picture
+        int cut = px.length / 50, lo = 0, hi = 255, acc = 0;
+        while (lo < 255 && (acc += hist[lo]) < cut) lo++;
+        acc = 0;
+        while (hi > 0 && (acc += hist[hi]) < cut) hi--;
+        if (hi <= lo) { lo = 0; hi = 255; }
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
                 int i = y * size + x;
-                float old = g[i], nu = old < 128f ? 0f : 255f, err = old - nu;
-                px[i] = nu == 0f ? 0xFF000000 : 0xFFFFFFFF;
-                if (x + 1 < size) g[i + 1] += err * 7f / 16f;
-                if (y + 1 < size) {
-                    if (x > 0) g[i + size - 1] += err * 3f / 16f;
-                    g[i + size] += err * 5f / 16f;
-                    if (x + 1 < size) g[i + size + 1] += err / 16f;
-                }
+                int v = Math.max(0, Math.min(255, (lum[i] - lo) * 255 / (hi - lo)));
+                int t = (BAYER[(y & 3) * 4 + (x & 3)] * 16) + 8;
+                px[i] = v < t ? 0xFF000000 : 0xFFFFFFFF;
             }
         }
         return Bitmap.createBitmap(px, size, size, Bitmap.Config.ARGB_8888);

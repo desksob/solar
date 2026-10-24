@@ -68,22 +68,7 @@ final class TvPages {
     }
 
     static void printNowOn(StationActivity a) {
-        JulyTv.Show s = JulyTv.now();
-        List<String> lines = new ArrayList<String>();
-        if (s != null) {
-            lines.add(s.song());
-            if (s.artist().length() > 0) lines.add(s.artist());
-            lines.add("");
-        }
-        lines.add("Channel: " + CHANNEL);
-        int n = 0;
-        for (JulyTv.Show x : JulyTv.fromNow()) {
-            if (x == s) continue;
-            if (n++ >= 2) break;
-            lines.add("Next " + hm(x.start) + "  " + x.song());
-        }
-        Printer.get().printLines("NOW ON\nJULY TV", lines, "tv.july.rip");
-        a.toast("Printing");
+        a.preview(com.july.os.receipts.Catalog.tvSlip());
     }
 
     // ---- A8 · July TV player ----

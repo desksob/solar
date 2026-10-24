@@ -195,8 +195,8 @@ public final class StationActivity extends Activity implements Player.Listener, 
             case Page.NAV_RADIO: return new HomePages.Radio();
             case Page.NAV_TV: return new TvPages.Tv();
             case Page.NAV_LIBRARY: return new MusicPages.Library();
-            case Page.NAV_LASTFM: return new MiscPages.Soon(Page.NAV_LASTFM, "Last.fm", "Recent tracks, week in music and Last.fm receipts", "Phase 2");
-            case Page.NAV_PRINT: return new MiscPages.Soon(Page.NAV_PRINT, "Print center", "Receipts, preview, history and auto-print", "Phase 2");
+            case Page.NAV_LASTFM: return new PrintPages.LastPlayed();
+            case Page.NAV_PRINT: return new PrintPages.Center();
             case Page.NAV_STORE: return new MiscPages.Soon(Page.NAV_STORE, "July Store", "The store opens soon. Browsing is open, buying is off.", "Phase 6");
             case Page.NAV_SETTINGS: return new MiscPages.Settings();
             default: return new HomePages.Home();
@@ -359,33 +359,17 @@ public final class StationActivity extends Activity implements Player.Listener, 
         onData();
     }
 
-    /** Print a slip for whatever is playing (radio or a library song). */
+    /** Print a slip for whatever is playing: opens its Preview (design B3). */
     void printNow() {
+        preview(com.july.os.receipts.Catalog.nowPlaying());
+    }
+
+    void preview(com.july.os.receipts.Receipt r) {
         if (!Printer.get().available()) {
             toast("No printer on this device");
             return;
         }
-        if (radioMode()) {
-            JulyRadio.Now n = JulyRadio.latest();
-            List<String> lines = new ArrayList<String>();
-            if (n != null) {
-                lines.add(n.headline());
-                if (n.subline().length() > 0) lines.add(n.subline());
-                if (n.album.length() > 0) lines.add(n.album);
-                if (n.show != null) {
-                    lines.add("");
-                    lines.add("Show: " + n.show.name);
-                    if (n.show.host.length() > 0) lines.add("Host: " + n.show.host);
-                }
-            } else {
-                lines.add("July Radio");
-            }
-            Printer.get().printLines("NOW PLAYING\nJULY RADIO", lines, "july.rip - live 24/7");
-        } else {
-            Track t = JulyApp.get().player().current();
-            if (t != null) Printer.get().printTrack(t);
-        }
-        toast("Printing");
+        push(new PrintPages.Preview(r));
     }
 
     void toast(String s) {
@@ -479,6 +463,11 @@ public final class StationActivity extends Activity implements Player.Listener, 
         refreshMini();
     }
 
+    /** The rail item of the page under the top one (typing pages light up where they came from). */
+    int stackNav() {
+        return stack.size() >= 2 ? stack.get(stack.size() - 2).nav() : Page.NAV_HOME;
+    }
+
     Page top() {
         return stack.isEmpty() ? null : stack.get(stack.size() - 1);
     }
@@ -498,12 +487,13 @@ public final class StationActivity extends Activity implements Player.Listener, 
     @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent e) {
         Page p = top();
-        if (e.getAction() == android.view.KeyEvent.ACTION_DOWN && p instanceof MusicPages.Search) {
-            MusicPages.Search s = (MusicPages.Search) p;
+        if (e.getAction() == android.view.KeyEvent.ACTION_DOWN && p instanceof Typable) {
+            Typable t = (Typable) p;
             int code = e.getKeyCode();
-            if (code == android.view.KeyEvent.KEYCODE_DEL) { s.delete(); return true; }
+            if (code == android.view.KeyEvent.KEYCODE_DEL) { t.delete(); return true; }
+            if (code == android.view.KeyEvent.KEYCODE_ENTER) { t.done(); return true; }
             int ch = e.getUnicodeChar();
-            if (ch > 0 && code != android.view.KeyEvent.KEYCODE_ENTER) { s.type(String.valueOf((char) ch)); return true; }
+            if (ch > 0) { t.type(String.valueOf((char) ch)); return true; }
         }
         return super.dispatchKeyEvent(e);
     }

@@ -444,19 +444,7 @@ final class HomePages {
         }
 
         private void printLineup() {
-            JulyRadio.Now n = JulyRadio.latest();
-            List<String> lines = new ArrayList<String>();
-            for (JulyRadio.Show s : shows(n)) {
-                if (dayOf(s) != day) continue;
-                lines.add(JulyRadio.toLocal(s.start) + "  " + s.name);
-                if (s.host.length() > 0) lines.add("       with " + s.host);
-            }
-            if (lines.isEmpty()) {
-                a.toast("Nothing to print yet");
-                return;
-            }
-            Printer.get().printLines("TONIGHT\n" + St.up(dayName(day)), lines, "july.rip - live 24/7");
-            a.toast("Printing");
+            a.preview(com.july.os.receipts.Catalog.tonight());
         }
     }
 }

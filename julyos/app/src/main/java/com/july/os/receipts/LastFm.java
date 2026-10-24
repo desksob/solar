@@ -32,6 +32,7 @@ public final class LastFm {
         public final long plays;
         public final long at; // when played (recent plays), else 0
         public String art;
+        public long durationSec; // top songs only (Last.fm's track length), else 0
 
         Entry(String name, String artist, String album, long plays, long at, String art) {
             this.name = name;
@@ -54,7 +55,12 @@ public final class LastFm {
 
     /** Up to n finished plays, newest first (the "now playing" entry is skipped). */
     public static List<Entry> recent(String user, int n) throws Exception {
-        JSONObject o = call("user.getrecenttracks", user, "&limit=" + n);
+        return recentSince(user, 0L, n);
+    }
+
+    /** Finished plays since {@code fromMs} (0 = any time), newest first, at most n. */
+    public static List<Entry> recentSince(String user, long fromMs, int n) throws Exception {
+        JSONObject o = call("user.getrecenttracks", user, "&limit=" + Math.min(200, n) + (fromMs > 0 ? "&from=" + fromMs / 1000 : ""));
         JSONArray a = o.getJSONObject("recenttracks").optJSONArray("track");
         List<Entry> out = new ArrayList<Entry>();
         for (int i = 0; a != null && i < a.length() && out.size() < n; i++) {
@@ -83,10 +89,32 @@ public final class LastFm {
             JSONObject ar = t.optJSONObject("artist");
             String artist = ar != null ? ar.optString("name", "") : "";
             String name = t.optString("name", "");
-            out.add(new Entry(name, ARTISTS.equals(kind) ? name : artist, ALBUMS.equals(kind) ? name : "",
-                    t.optLong("playcount", 0L), 0L, art(t)));
+            Entry e = new Entry(name, ARTISTS.equals(kind) ? name : artist, ALBUMS.equals(kind) ? name : "",
+                    t.optLong("playcount", 0L), 0L, art(t));
+            e.durationSec = t.optLong("duration", 0L);
+            out.add(e);
         }
         return out;
+    }
+
+    /** How many plays since {@code fromMs} (Last.fm's total for the recent-tracks query). */
+    public static long playsSince(String user, long fromMs) throws Exception {
+        JSONObject o = call("user.getrecenttracks", user, "&limit=1&from=" + fromMs / 1000);
+        JSONObject attr = o.getJSONObject("recenttracks").optJSONObject("@attr");
+        return attr != null ? attr.optLong("total", 0L) : 0L;
+    }
+
+    /** How many different albums / songs / artists over a period. */
+    public static long count(String user, String kind, String period) throws Exception {
+        String method = ALBUMS.equals(kind) ? "user.gettopalbums" : SONGS.equals(kind) ? "user.gettoptracks" : "user.gettopartists";
+        String root = ALBUMS.equals(kind) ? "topalbums" : SONGS.equals(kind) ? "toptracks" : "topartists";
+        JSONObject attr = call(method, user, "&period=" + period + "&limit=1").getJSONObject(root).optJSONObject("@attr");
+        return attr != null ? attr.optLong("total", 0L) : 0L;
+    }
+
+    /** Throws {@link NoSuchUser} for an unknown name; used before saving a typed username. */
+    public static void check(String user) throws Exception {
+        call("user.getinfo", user, "");
     }
 
     /**
