@@ -89,6 +89,8 @@ public final class Fm {
         worker.execute(new Runnable() {
             @Override
             public void run() {
+                // The engine's no-headphones fallback saves "speaker"; with headphones in, always use them.
+                if (engine().isWiredHeadsetOn()) engine().setAudioOutput(FmAudioRouter.Output.WIRED);
                 boolean ok = engine().playStation(khz);
                 on = ok;
                 failed = !ok;
