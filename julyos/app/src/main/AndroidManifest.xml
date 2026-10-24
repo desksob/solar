@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.SET_TIME_ZONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Android 4.2's A2DP connect() saves the device priority in Global settings as the caller;
+         granted with pm grant on the rooted Y1 so headphones (AirPods) can connect. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application
         android:name=".JulyApp"
