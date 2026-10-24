@@ -121,7 +121,7 @@ final class PrintPages {
             head.addView(St.button(c, "Auto-print", St.REFRESH, false, 40, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    a.toast("Auto-print rules come in phase 4");
+                    a.push(new RequestPages.Rules());
                 }
             }), St.left(St.lp(-2, 40), 10));
             LinearLayout qb = St.button(c, "Queue · 0", St.TICKET, false, 40, new View.OnClickListener() {
@@ -201,7 +201,8 @@ final class PrintPages {
             St.clickable(f, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (r.ready) a.preview(r);
+                    if ("Request ticket".equals(r.name)) a.push(new RequestPages.Queue());
+                    else if (r.ready) a.preview(r);
                     else a.toast(Catalog.soonReason(r));
                 }
             });
@@ -332,6 +333,7 @@ final class PrintPages {
                 public void onClick(View v) {
                     if (made == null) return;
                     PrintQueue.Job j = queue(a).add(r.group, r.historyTitle(), r.historySub(), made, copies);
+                    r.printed(a);
                     a.replace(new Printing(j));
                 }
             });

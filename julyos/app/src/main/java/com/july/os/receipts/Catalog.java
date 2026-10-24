@@ -63,7 +63,7 @@ public final class Catalog {
         l.add(new Tracklist(true));
         l.add(new Tonight());
         l.add(new Recap());
-        l.add(new Soon(RADIO, "Request ticket", "Queue number", "ticket", "Comes with song requests"));
+        l.add(new RequestTicket(null));
         l.add(new Dedication());
         l.add(new TvSlip());
         l.add(new Soon(EVENTS, "Event lineup", "Studio, phase 5", "calendar", "Comes with Studio"));
@@ -81,6 +81,10 @@ public final class Catalog {
     public static Receipt tonight() { return new Tonight(); }
     public static Receipt tvSlip() { return new TvSlip(); }
     public static Receipt week() { return new Week(); }
+    public static Receipt requestTicket(Requests.Request r) { return new RequestTicket(r); }
+    public static Receipt favouriteSlip(String title, String artist) { return new FavouriteSlip(title, artist); }
+    public static Receipt daySummary() { return new Day(); }
+    public static Receipt showCard() { return new ShowCard(); }
 
     /** Why a not-yet-built receipt is greyed out. */
     public static String soonReason(Receipt r) {
@@ -469,6 +473,7 @@ public final class Catalog {
         final Option song = text("Song", ""), to = text("For", "Wanjiru"), from = text("From", "July Radio"),
                 msg = text("Message", "This one's for you.");
         final Option qr = opt("QR to july.rip", ON_OFF, 0);
+        final Option onAir = opt("Play it on air next", OFF_ON, 0);
 
         Dedication() {
             super(RADIO, "Dedication", "A message with a song", "heart", true);
@@ -481,6 +486,14 @@ public final class Catalog {
         @Override
         public String historyTitle() {
             return "Dedication · for " + to.value();
+        }
+
+        /** "Play it on air next": the song joins the requests (with who it's from). */
+        @Override
+        public void printed(Context c) {
+            if (!onAir.on()) return;
+            String[] parts = song.value().split(" · ", 2);
+            Requests.add(parts[0], parts.length > 1 ? parts[1] : "", "Dedication for " + to.value());
         }
 
         @Override
@@ -592,6 +605,109 @@ public final class Catalog {
             return start(c, width, "Day summary").center(new SimpleDateFormat("EEE d MMM yyyy", Locale.getDefault()).format(new Date())).rule()
                     .kv("Songs played", String.valueOf(plays)).kv("Prints", String.valueOf(PrintQueue.get(c).printedToday()))
                     .rule().center("Printed " + hm(System.currentTimeMillis())).build();
+        }
+    }
+
+    // ---- F2 · Song request ticket ----
+
+    static final class RequestTicket extends Receipt {
+        final Requests.Request fixed;
+
+        RequestTicket(Requests.Request r) {
+            super(RADIO, "Request ticket", "Queue number", "ticket", true);
+            fixed = r;
+        }
+
+        Requests.Request req() {
+            return fixed != null ? fixed : Requests.latest();
+        }
+
+        @Override
+        public String detail() {
+            Requests.Request r = req();
+            return r != null ? "Request #" + r.number + " · " + r.title : "No requests yet today";
+        }
+
+        @Override
+        public String historyTitle() {
+            Requests.Request r = req();
+            return r != null ? "Request ticket #" + r.number : "Request ticket";
+        }
+
+        @Override
+        public String historySub() {
+            Requests.Request r = req();
+            return r != null ? r.title : "";
+        }
+
+        @Override
+        public Bitmap make(Context c, int width, Progress p) throws Exception {
+            Requests.Request r = req();
+            if (r == null) throw new IllegalStateException("no requests");
+            int[] pos = Requests.position(r);
+            Slip s = start(c, width, "Song request").center("Your number").center("#" + r.number, 54, true).rule()
+                    .text(r.title, 14, true);
+            if (r.artist.length() > 0) s.text(r.artist);
+            s.rule();
+            if (Requests.QUEUED.equals(r.state) && pos != null) {
+                s.kv("Plays in", pos[1] <= 0 ? "next" : "about " + pos[1] + " min");
+                s.kv("Before you", pos[0] + (pos[0] == 1 ? " song" : " songs"));
+            } else {
+                s.kv("Passed to", "the DJ");
+                if (pos != null) s.kv("Before you", pos[0] + (pos[0] == 1 ? " request" : " requests"));
+            }
+            if (r.from.length() > 0) s.kv("For", r.from);
+            return s.kv("Asked at", hm(r.at)).barcode().build();
+        }
+    }
+
+    // ---- Show card: printed when a show starts ----
+
+    static final class ShowCard extends Receipt {
+        ShowCard() {
+            super(RADIO, "Show card", "Host and times", "clock", true);
+        }
+
+        @Override
+        public String historySub() {
+            JulyRadio.Now n = JulyRadio.latest();
+            return n != null && n.show != null ? n.show.name : "";
+        }
+
+        @Override
+        public Bitmap make(Context c, int width, Progress p) {
+            JulyRadio.Now n = JulyRadio.latest();
+            JulyRadio.Show sh = n != null ? n.show : null;
+            Slip s = start(c, width, "On air now");
+            if (sh == null) return s.center("July Radio · live 24/7").build();
+            s.text(sh.name, 16, true);
+            if (sh.host.length() > 0) s.text("with " + sh.host);
+            s.text(sh.localTimes());
+            if (sh.description.length() > 0) s.rule().text(sh.description);
+            return s.rule().qr(QR_SITE, "Scan to open on july.rip").build();
+        }
+    }
+
+    // ---- Favourite saved (auto-print) ----
+
+    static final class FavouriteSlip extends Receipt {
+        final String title, artist;
+
+        FavouriteSlip(String title, String artist) {
+            super(MUSIC, "Favourite saved", "Song and QR", "heart", true);
+            this.title = title;
+            this.artist = artist;
+        }
+
+        @Override
+        public String historySub() {
+            return title;
+        }
+
+        @Override
+        public Bitmap make(Context c, int width, Progress p) {
+            return start(c, width, "Saved to favourites").text(title, 16, true).text(artist).rule()
+                    .kv("Saved", stamp()).qr(QR_SITE, "Scan to open on july.rip").build();
         }
     }
 

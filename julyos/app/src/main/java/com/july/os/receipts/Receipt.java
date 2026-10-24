@@ -106,6 +106,10 @@ public abstract class Receipt {
         return line;
     }
 
+    /** Called once it's queued from Preview (a dedication can add its song to the requests). */
+    public void printed(Context c) {
+    }
+
     /** Draw the whole receipt ({@link Slip}) at {@code width} dots. Background thread. */
     public abstract Bitmap make(Context c, int width, Progress p) throws Exception;
 

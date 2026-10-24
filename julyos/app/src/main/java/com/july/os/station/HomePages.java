@@ -277,6 +277,7 @@ final class HomePages {
                     }
                     boolean on = a.favs.toggle(n.title, n.artist, n.album, n.art);
                     a.toast(on ? "Saved to favourites" : "Removed from favourites");
+                    if (on) com.july.os.receipts.AutoPrint.favourite(n.title, n.artist);
                     onData();
                 }
             });
@@ -289,10 +290,16 @@ final class HomePages {
                     }
                 }), St.left(St.lp(56, 56), 12));
             }
-            btns.addView(St.button(c, "What's on", St.CALENDAR, false, 56, new View.OnClickListener() {
+            btns.addView(St.iconButton(c, St.CALENDAR, false, 56, 24, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     a.push(new WhatsOn());
+                }
+            }), St.left(St.lp(56, 56), 12));
+            btns.addView(St.button(c, "Request", St.PLUS, false, 56, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    a.push(new RequestPages.Add());
                 }
             }), St.left(St.lp(-2, 56), 12));
             right.addView(btns);

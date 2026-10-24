@@ -569,6 +569,7 @@ public final class StationActivity extends Activity implements Player.Listener, 
             Page p = top();
             if (p != null) p.tick();
             idleChecks();
+            com.july.os.receipts.AutoPrint.tick();
             handler.postDelayed(this, 1000);
         }
     };

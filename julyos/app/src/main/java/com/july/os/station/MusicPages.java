@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Section A, music: A3 Now playing, A4 Library (+ album / artist), A5 Search, A6 Queue. */
+/** Section A, music: A3 Now playing, A4 Library (+ album / artist), A5 Search. Queue + requests (A6) is RequestPages. */
 final class MusicPages {
 
     private MusicPages() {}
@@ -206,7 +206,7 @@ final class MusicPages {
             side.addView(St.button(c, "Queue", St.LIBRARY, false, 44, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    a.push(new Queue());
+                    a.push(new RequestPages.Queue());
                 }
             }), St.lp(-1, 44));
             if (Printer.get().available()) {
@@ -561,105 +561,6 @@ final class MusicPages {
                     a.go(new NowPlaying());
                 }
             }), new FrameLayout.LayoutParams(-1, -1));
-        }
-    }
-
-    // ---- A6 · Queue ----
-
-    static final class Queue extends Page {
-        private LinearLayout list;
-
-        @Override String title() { return "Queue"; }
-
-        @Override
-        String sub() {
-            List<Track> up = pl().upcoming();
-            long ms = 0;
-            for (Track t : up) ms += t.durationMs;
-            return up.size() + (up.size() == 1 ? " song · " : " songs · ") + (ms / 60000) + " min";
-        }
-
-        @Override int nav() { return NAV_LIBRARY; }
-
-        @Override
-        View build() {
-            Context c = a;
-            LinearLayout page = HomePages.padded(c);
-            LinearLayout head = St.row(c);
-            head.addView(HomePages.big(c, "Up next"), new LinearLayout.LayoutParams(0, -2, 1f));
-            if (Printer.get().available() && pl().hasQueue()) {
-                head.addView(St.button(c, "Print queue", St.TICKET, true, 44, new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Printer.get().printQueue(pl().upcoming(), pl().position() + 1);
-                        a.toast("Printing");
-                    }
-                }), St.lp(-2, 44));
-            }
-            page.addView(head);
-            android.widget.ScrollView sv = new android.widget.ScrollView(c);
-            list = St.col(c);
-            sv.addView(list);
-            page.addView(sv, St.top(new LinearLayout.LayoutParams(-1, 0, 1f), 10));
-            LinearLayout btns = St.row(c);
-            btns.addView(St.button(c, "Add a song", St.PLUS, false, 44, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    a.push(new Search());
-                }
-            }), St.lp(-2, 44));
-            btns.addView(St.button(c, "Clear queue", St.TRASH, false, 44, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    for (int i = pl().upcoming().size() - 1; i >= 1; i--) pl().removeUpcoming(i);
-                    a.rebuild();
-                }
-            }), St.left(St.lp(-2, 44), 10));
-            page.addView(btns, St.top(St.lp(-1, -2), 10));
-            onData();
-            return page;
-        }
-
-        @Override
-        void onData() {
-            if (list == null) return;
-            list.removeAllViews();
-            final List<Track> up = pl().upcoming();
-            if (up.isEmpty()) {
-                list.addView(empty(a, "The queue is empty"), St.top(St.lp(-2, -2), 20));
-                return;
-            }
-            long wait = Math.max(0, pl().durationMs() - pl().positionMs());
-            for (int i = 0; i < up.size(); i++) {
-                final int offset = i;
-                Track t = up.get(i);
-                String right = i == 0 ? null : "#" + (pl().position() + 1 + i) + " · " + Math.max(1, wait / 60000) + " min";
-                LinearLayout r = songRow(a, t, right, 50, i == 0);
-                if (i == 0) {
-                    TextView playing = St.caps(a, "Playing", 10, true, 0.1f, St.bg);
-                    playing.setPadding(St.px(10), St.px(4), St.px(10), St.px(4));
-                    playing.setBackground(St.box(0, St.bg, 1));
-                    r.addView(playing, St.left(St.lp(-2, -2), 12));
-                } else {
-                    wait += t.durationMs;
-                    St.clickable(r, new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            pl().play(up, offset);
-                        }
-                    });
-                    r.setOnLongClickListener(new View.OnLongClickListener() {
-                        @Override
-                        public boolean onLongClick(View v) {
-                            pl().removeUpcoming(offset);
-                            a.toast("Removed from the queue");
-                            onData();
-                            return true;
-                        }
-                    });
-                }
-                list.addView(i == 0 ? r : ruled(a, r, 50), new LinearLayout.LayoutParams(-1, St.px(50)));
-            }
         }
     }
 }
