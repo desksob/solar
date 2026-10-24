@@ -36,7 +36,7 @@ final class St {
     private St() {}
 
     static float u = 2f;
-    static int bg, ink, muted, hair, accent, onAccent;
+    static int bg, ink, line, muted, hair, accent, onAccent;
     static boolean dark;
     static Typeface med, semi;
 
@@ -51,17 +51,119 @@ final class St {
         theme();
     }
 
-    /** The design's two palettes; accent is ink unless a custom one is saved. */
+    // ---- appearance (design E9 / E10) ----
+
+    static final String LIGHT = "light", DARK = "dark", AUTO = "auto";
+    /** The six colours people can change, in the Appearance list's order. */
+    static final String[] KEYS = {"bg", "ink", "accent", "line", "muted", "hair"};
+    static final String[] KEY_NAMES = {"Background", "Text", "Accent", "Border", "Muted text", "Dim"};
+
+    /** Presets: name, then bg, ink, accent (0 = same as text), border, muted, dim. */
+    static final Object[][] PRESETS = {
+            {"Mono light", 0xFFFFFFFF, 0xFF0A0A0A, 0, 0xFF0A0A0A, 0xFF666666, 0xFFE2E2E2},
+            {"Mono dark", 0xFF0A0A0A, 0xFFF5F5F5, 0, 0xFFF5F5F5, 0xFFA0A0A0, 0xFF262626},
+            {"Halloween", 0xFF0A0A0A, 0xFFF5F5F5, 0xFFFF7A1A, 0xFFFF7A1A, 0xFFA0A0A0, 0xFF2A1A0A},
+            {"Gold", 0xFF0A0A0A, 0xFFF5F5F5, 0xFFC8A96E, 0xFFC8A96E, 0xFFA0A0A0, 0xFF262626},
+    };
+
+    static android.content.SharedPreferences prefs() {
+        return JulyApp.get().prefs();
+    }
+
+    static String mode() {
+        return prefs().getString("station_mode", JulyApp.get().darkTheme() ? DARK : LIGHT);
+    }
+
+    /** Auto: dark from 19:00 to 07:00. */
+    static boolean wantsDark() {
+        String m = mode();
+        if (AUTO.equals(m)) {
+            int h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
+            return h >= 19 || h < 7;
+        }
+        return DARK.equals(m);
+    }
+
+    /** Festive themes (off by default): Halloween on 31 Oct, Gold over Christmas. */
+    static Object[] festive() {
+        if (!prefs().getBoolean("station_festive", false)) return null;
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        int mo = c.get(java.util.Calendar.MONTH), d = c.get(java.util.Calendar.DAY_OF_MONTH);
+        if (mo == java.util.Calendar.OCTOBER && d == 31) return PRESETS[2];
+        if (mo == java.util.Calendar.DECEMBER && d >= 24 && d <= 26) return PRESETS[3];
+        return null;
+    }
+
+    /** The design's two palettes, then any colours saved in Appearance (0 = not set). */
     static void theme() {
-        dark = JulyApp.get().darkTheme();
-        bg = dark ? 0xFF0A0A0A : 0xFFFFFFFF;
-        ink = dark ? 0xFFF5F5F5 : 0xFF0A0A0A;
-        muted = dark ? 0xFFA0A0A0 : 0xFF666666;
-        hair = dark ? 0xFF262626 : 0xFFE2E2E2;
-        int custom = JulyApp.get().prefs().getInt("station_accent", 0);
-        accent = custom != 0 ? custom : ink;
-        int lum = (((accent >> 16) & 0xFF) * 299 + ((accent >> 8) & 0xFF) * 587 + (accent & 0xFF) * 114) / 1000;
-        onAccent = lum > 140 ? 0xFF0A0A0A : 0xFFFFFFFF;
+        dark = wantsDark();
+        Object[] p = festive();
+        if (p == null) p = PRESETS[dark ? 1 : 0];
+        bg = pick("bg", (Integer) p[1]);
+        ink = pick("ink", (Integer) p[2]);
+        line = pick("line", (Integer) p[4]);
+        muted = pick("muted", (Integer) p[5]);
+        hair = pick("hair", (Integer) p[6]);
+        int a = pick("accent", (Integer) p[3]);
+        accent = a != 0 ? a : ink;
+        dark = luminance(bg) < 128;
+        onAccent = luminance(accent) > 140 ? 0xFF0A0A0A : 0xFFFFFFFF;
+    }
+
+    /** A saved colour wins over the palette; the palette is split by light / dark. */
+    private static int pick(String key, int def) {
+        int v = prefs().getInt("station_c_" + (dark ? "d_" : "l_") + key, 0);
+        return v != 0 ? v : def;
+    }
+
+    /** The colour currently in use for a key (for the Appearance list). */
+    static int current(String key) {
+        if ("bg".equals(key)) return bg;
+        if ("ink".equals(key)) return ink;
+        if ("line".equals(key)) return line;
+        if ("muted".equals(key)) return muted;
+        if ("hair".equals(key)) return hair;
+        return accent;
+    }
+
+    static boolean accentIsText() {
+        return prefs().getInt("station_c_" + (dark ? "d_" : "l_") + "accent", 0) == 0 && accent == ink;
+    }
+
+    static void setColour(String key, int colour) {
+        prefs().edit().putInt("station_c_" + (wantsDark() ? "d_" : "l_") + key, colour).apply();
+    }
+
+    /** Apply a preset to the current mode (Mono dark switches to dark, and so on). */
+    static void preset(Object[] p) {
+        boolean d = luminance((Integer) p[1]) < 128;
+        prefs().edit().putString("station_mode", d ? DARK : LIGHT).apply();
+        JulyApp.get().setDarkTheme(d);
+        String pre = "station_c_" + (d ? "d_" : "l_");
+        android.content.SharedPreferences.Editor e = prefs().edit();
+        for (int i = 0; i < KEYS.length; i++) {
+            int v = (Integer) p[new int[]{1, 2, 3, 4, 5, 6}[i]];
+            e.putInt(pre + KEYS[i], "accent".equals(KEYS[i]) ? v : v);
+        }
+        e.apply();
+    }
+
+    static void reset() {
+        android.content.SharedPreferences.Editor e = prefs().edit();
+        for (String k : KEYS) {
+            e.remove("station_c_l_" + k);
+            e.remove("station_c_d_" + k);
+        }
+        e.remove("station_accent");
+        e.apply();
+    }
+
+    static int luminance(int c) {
+        return (((c >> 16) & 0xFF) * 299 + ((c >> 8) & 0xFF) * 587 + (c & 0xFF) * 114) / 1000;
+    }
+
+    static String hex(int c) {
+        return String.format(Locale.ROOT, "#%06X", c & 0xFFFFFF);
     }
 
     static int px(float units) {
@@ -105,7 +207,7 @@ final class St {
         b.setOrientation(LinearLayout.HORIZONTAL);
         b.setGravity(Gravity.CENTER);
         b.setPadding(px(20), 0, px(20), 0);
-        b.setBackground(filled ? box(ink, ink, 1) : box(0, ink, 1));
+        b.setBackground(filled ? box(ink, ink, 1) : box(0, line, 1));
         int fg = filled ? bg : ink;
         if (icon >= 0) b.addView(new Icon(c, icon, fg), new LinearLayout.LayoutParams(px(18), px(18)));
         if (label != null) {
@@ -122,7 +224,7 @@ final class St {
     /** Square icon-only button (design .ibtn). */
     static FrameLayout iconButton(Context c, int icon, boolean filled, float size, float iconSize, View.OnClickListener on) {
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(filled ? box(ink, ink, 1) : box(0, ink, 1));
+        f.setBackground(filled ? box(ink, ink, 1) : box(0, line, 1));
         f.addView(new Icon(c, icon, filled ? bg : ink), new FrameLayout.LayoutParams(px(iconSize), px(iconSize), Gravity.CENTER));
         f.setMinimumWidth(px(size));
         f.setMinimumHeight(px(size));
@@ -135,7 +237,7 @@ final class St {
         int fill = useAccent ? accent : ink;
         TextView t = caps(c, s, size, true, 0.1f, filled ? (useAccent ? onAccent : bg) : ink);
         t.setPadding(px(10), px(4), px(10), px(4));
-        t.setBackground(filled ? box(fill, fill, 0) : box(0, ink, 1));
+        t.setBackground(filled ? box(fill, fill, 0) : box(0, line, 1));
         return t;
     }
 
@@ -200,7 +302,7 @@ final class St {
     static final int PRINTER = 0, WIFI = 1, BT = 2, VOLUME = 3, HOME = 4, RADIO = 5, TV = 6, LIBRARY = 7,
             LASTFM = 8, STORE = 9, SETTINGS = 10, PLAY = 11, CALENDAR = 12, PREV = 13, PAUSE = 14, NEXT = 15,
             HEART = 16, SHUFFLE = 17, REPEAT = 18, SEARCH = 19, TICKET = 20, PLUS = 21, TRASH = 22, CLOCK = 23,
-            SCREEN = 24, CLOSE = 25, CHEVRON = 26, BACK = 27, SPEAKER = 28, SLIDERS = 29, REFRESH = 30, HEART_FULL = 31;
+            SCREEN = 24, CLOSE = 25, CHEVRON = 26, BACK = 27, SPEAKER = 28, SLIDERS = 29, REFRESH = 30, HEART_FULL = 31, LOCK = 32;
 
     /** Path data per icon; "F:" = filled, circle(cx,cy,r) and rect(x,y,w,h) written out as paths. */
     private static final String[][] ICONS = {
@@ -236,6 +338,7 @@ final class St {
             {"M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4"},
             {"M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"},
             {"F:M12 21C4 15 2 10 4.5 6.5 6.8 3.5 10.5 4.3 12 7c1.5-2.7 5.2-3.5 7.5-.5C22 10 20 15 12 21z"},
+            {"M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"},
     };
 
     private static String circle(float cx, float cy, float r) {

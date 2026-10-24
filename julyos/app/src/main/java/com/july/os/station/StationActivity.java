@@ -79,7 +79,54 @@ public final class StationActivity extends Activity implements Player.Listener, 
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
         askForStorage();
+        applyBrightness();
         go(new HomePages.Home());
+        // E8: the start-up screen over Home for a moment
+        full.addView(SystemPages.boot(this), new FrameLayout.LayoutParams(-1, -1));
+        full.setVisibility(View.VISIBLE);
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Page p = top();
+                if (p != null && !p.fullscreen()) {
+                    full.removeAllViews();
+                    full.setVisibility(View.GONE);
+                }
+            }
+        }, 1800);
+        autoDark = St.wantsDark();
+    }
+
+    private boolean autoDark;
+    private long lastTouch = System.currentTimeMillis();
+
+    /** Display → Brightness for this window (-1 leaves it to Android). */
+    void applyBrightness() {
+        int b = SystemPages.Display.brightness();
+        android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = b < 0 ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : b / 100f;
+        getWindow().setAttributes(lp);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent e) {
+        lastTouch = System.currentTimeMillis();
+        return super.dispatchTouchEvent(e);
+    }
+
+    /** E7: the standby screen after the set idle time; auto light / dark at 07:00 and 19:00. */
+    private void idleChecks() {
+        int min = SystemPages.Display.standbyMinutes();
+        Page p = top();
+        if (min > 0 && p != null && !p.fullscreen() && video.state() != StationVideo.PLAYING
+                && System.currentTimeMillis() - lastTouch > min * 60000L) {
+            push(new SystemPages.Standby());
+        }
+        boolean want = St.wantsDark();
+        if (want != autoDark) {
+            autoDark = want;
+            restyle();
+        }
     }
 
     // ---- chrome ----
@@ -89,15 +136,15 @@ public final class StationActivity extends Activity implements Player.Listener, 
         root.setBackgroundColor(St.bg);
         chrome = St.col(this);
         chrome.addView(topBar(), St.lp(-1, 60));
-        chrome.addView(St.rule(this, St.ink), new LinearLayout.LayoutParams(-1, 1));
+        chrome.addView(St.rule(this, St.line), new LinearLayout.LayoutParams(-1, 1));
         LinearLayout mid = St.row(this);
         mid.setGravity(Gravity.TOP);
         mid.addView(rail(), St.lp(84, -1));
-        mid.addView(St.rule(this, St.ink), new LinearLayout.LayoutParams(1, -1));
+        mid.addView(St.rule(this, St.line), new LinearLayout.LayoutParams(1, -1));
         content = new FrameLayout(this);
         mid.addView(content, new LinearLayout.LayoutParams(0, -1, 1f));
         chrome.addView(mid, new LinearLayout.LayoutParams(-1, 0, 1f));
-        chrome.addView(St.rule(this, St.ink), new LinearLayout.LayoutParams(-1, 1));
+        chrome.addView(St.rule(this, St.line), new LinearLayout.LayoutParams(-1, 1));
         chrome.addView(mini(), St.lp(-1, 70));
         root.addView(chrome, new FrameLayout.LayoutParams(-1, -1));
         full = new FrameLayout(this);
@@ -126,7 +173,7 @@ public final class StationActivity extends Activity implements Player.Listener, 
         logo.setAdjustViewBounds(true);
         if (St.dark) logo.setColorFilter(new PorterDuffColorFilter(0xFFF5F5F5, PorterDuff.Mode.SRC_IN));
         bar.addView(logo, new LinearLayout.LayoutParams(-2, St.px(40)));
-        bar.addView(St.rule(this, St.ink), St.left(new LinearLayout.LayoutParams(1, St.px(40)), 22));
+        bar.addView(St.rule(this, St.line), St.left(new LinearLayout.LayoutParams(1, St.px(40)), 22));
         LinearLayout tt = St.col(this);
         title = St.caps(this, "", 17, true, 0.06f, St.ink);
         sub = St.caps(this, "", 10, false, 0.1f, St.muted);
@@ -191,6 +238,8 @@ public final class StationActivity extends Activity implements Player.Listener, 
     }
 
     Page navPage(int n) {
+        // live sections need the internet (design E3)
+        if ((n == Page.NAV_RADIO || n == Page.NAV_TV || n == Page.NAV_LASTFM) && !online()) return new SystemPages.Offline(n);
         switch (n) {
             case Page.NAV_RADIO: return new HomePages.Radio();
             case Page.NAV_TV: return new TvPages.Tv();
@@ -198,7 +247,7 @@ public final class StationActivity extends Activity implements Player.Listener, 
             case Page.NAV_LASTFM: return new PrintPages.LastPlayed();
             case Page.NAV_PRINT: return new PrintPages.Center();
             case Page.NAV_STORE: return new MiscPages.Soon(Page.NAV_STORE, "July Store", "The store opens soon. Browsing is open, buying is off.", "Phase 6");
-            case Page.NAV_SETTINGS: return new MiscPages.Settings();
+            case Page.NAV_SETTINGS: return new SystemPages.Settings();
             default: return new HomePages.Home();
         }
     }
@@ -354,6 +403,10 @@ public final class StationActivity extends Activity implements Player.Listener, 
     }
 
     void listenLive() {
+        if (!online()) {
+            push(new SystemPages.Offline(Page.NAV_RADIO));
+            return;
+        }
         video.stop();
         if (!JulyPlayer.isActive()) JulyPlayer.start(this);
         onData();
@@ -515,6 +568,7 @@ public final class StationActivity extends Activity implements Player.Listener, 
             refreshMini();
             Page p = top();
             if (p != null) p.tick();
+            idleChecks();
             handler.postDelayed(this, 1000);
         }
     };

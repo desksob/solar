@@ -44,6 +44,15 @@ public final class Catalog {
         JulyApp.get().prefs().edit().putString("station_lastfm_user", u).apply();
     }
 
+    /** Settings → Last.fm: how many songs a Last played receipt starts with. */
+    public static int receiptTracks() {
+        return JulyApp.get().prefs().getInt("station_lastfm_tracks", 10);
+    }
+
+    public static void setReceiptTracks(int n) {
+        JulyApp.get().prefs().edit().putInt("station_lastfm_tracks", n).apply();
+    }
+
     public static List<Receipt> all(Context c) {
         List<Receipt> l = new ArrayList<Receipt>();
         l.add(new NowPlaying());
@@ -192,6 +201,8 @@ public final class Catalog {
 
         LastPlayed() {
             super(MUSIC, "Last played", "Any Last.fm user", "lastfm", true);
+            String n = String.valueOf(receiptTracks());
+            for (int i = 0; i < tracks.values.length; i++) if (tracks.values[i].equals(n)) tracks.index = i;
         }
 
         @Override

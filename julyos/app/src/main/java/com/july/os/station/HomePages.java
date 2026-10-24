@@ -164,7 +164,7 @@ final class HomePages {
         /** Home shortcut tile (design: 118 tall, icon top, name and line at the bottom). */
         static View tile(Context c, int icon, String name, String line, boolean filled, String badge, View.OnClickListener on) {
             FrameLayout f = new FrameLayout(c);
-            f.setBackground(filled ? St.box(St.ink, St.ink, 1) : St.box(0, St.ink, 1));
+            f.setBackground(filled ? St.box(St.ink, St.ink, 1) : St.box(0, St.line, 1));
             int fg = filled ? St.bg : St.ink;
             LinearLayout in = St.col(c);
             in.setPadding(St.px(16), St.px(16), St.px(16), St.px(16));

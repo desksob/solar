@@ -197,7 +197,7 @@ final class MusicPages {
             times.addView(right);
             mid.addView(times);
             main.addView(mid, St.left(new LinearLayout.LayoutParams(0, -1, 1f), 26));
-            main.addView(St.rule(c, St.ink), St.left(new LinearLayout.LayoutParams(1, -1), 26));
+            main.addView(St.rule(c, St.line), St.left(new LinearLayout.LayoutParams(1, -1), 26));
             LinearLayout side = St.col(c);
             side.addView(HomePages.label(c, "Up next"));
             next = St.col(c);
@@ -254,7 +254,7 @@ final class MusicPages {
         }
 
         private static void mark(FrameLayout b, int icon, boolean on) {
-            b.setBackground(on ? St.box(St.ink, St.ink, 1) : St.box(0, St.ink, 1));
+            b.setBackground(on ? St.box(St.ink, St.ink, 1) : St.box(0, St.line, 1));
             ((St.Icon) b.getChildAt(0)).set(icon, on ? St.bg : St.ink);
         }
 

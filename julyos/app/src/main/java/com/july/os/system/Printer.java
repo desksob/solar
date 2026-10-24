@@ -183,7 +183,7 @@ public final class Printer {
                     p.setAlignment(1, null);
                     p.printBitmap(b, null);
                     p.lineWrap(4, null);
-                    p.sendRAWData(new byte[]{0x1D, 0x56, 0x00}, null);
+                    if (autoCut()) p.sendRAWData(new byte[]{0x1D, 0x56, 0x00}, null);
                     p.exitPrinterBufferWithCallback(true, new InnerResultCallback() {
                         private boolean sent;
 
@@ -215,14 +215,53 @@ public final class Printer {
         }, "july-print").start();
     }
 
-    /** Paper width in dots: 384 on 58mm rolls, 576 on 80mm (the T2). */
+    /** Paper width in dots: the Printer setting, else what the printer reports (384 = 58mm, 576 = 80mm). */
     public int paperWidth() {
+        String p = paperSetting();
+        if ("58".equals(p)) return 384;
+        if ("80".equals(p)) return 576;
+        return detectedWidth();
+    }
+
+    public int detectedWidth() {
         try {
             SunmiPrinterService p = service;
             return p != null && p.getPrinterPaper() == 1 ? 384 : 576;
         } catch (Throwable e) {
             return 576;
         }
+    }
+
+    // ---- Station's printer settings (design E5) ----
+
+    private static android.content.SharedPreferences prefs() {
+        return com.july.os.JulyApp.get().prefs();
+    }
+
+    /** "auto", "58" or "80". */
+    public static String paperSetting() {
+        return prefs().getString("printer_paper", "auto");
+    }
+
+    public static void setPaperSetting(String v) {
+        prefs().edit().putString("printer_paper", v).apply();
+    }
+
+    public static boolean autoCut() {
+        return prefs().getBoolean("printer_cut", true);
+    }
+
+    public static void setAutoCut(boolean on) {
+        prefs().edit().putBoolean("printer_cut", on).apply();
+    }
+
+    /** 0 light, 1 medium, 2 dark: receipts draw lighter or heavier (the head's own density is fixed). */
+    public static int darkness() {
+        return prefs().getInt("printer_dark", 1);
+    }
+
+    public static void setDarkness(int d) {
+        prefs().edit().putInt("printer_dark", d).apply();
     }
 
     /** Result of {@link #print}: called on the main thread once the printer has finished (or failed). */

@@ -308,6 +308,7 @@ public final class Slip {
         p.setTextSize(Math.round(size * s));
         p.setColor(Color.BLACK);
         p.setLetterSpacing(tracking);
+        if (com.july.os.system.Printer.darkness() == 2) p.setFakeBoldText(true);
         return p;
     }
 

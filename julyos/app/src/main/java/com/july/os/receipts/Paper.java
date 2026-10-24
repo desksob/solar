@@ -319,6 +319,12 @@ public final class Paper {
         return out;
     }
 
+    /** Printer darkness: light pictures print lighter, dark heavier. */
+    static int shade() {
+        int d = com.july.os.system.Printer.darkness();
+        return d == 0 ? 30 : d == 2 ? -30 : 0;
+    }
+
     private static final int[] BAYER = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
 
     /**
@@ -339,7 +345,7 @@ public final class Paper {
             hist[lum[i]]++;
         }
         // ignore the darkest and lightest 2% so one stray pixel doesn't flatten the picture
-        int cut = px.length / 50, lo = 0, hi = 255, acc = 0;
+        int cut = px.length / 50, lo = 0, hi = 255, acc = 0, shade = shade();
         while (lo < 255 && (acc += hist[lo]) < cut) lo++;
         acc = 0;
         while (hi > 0 && (acc += hist[hi]) < cut) hi--;
@@ -347,7 +353,7 @@ public final class Paper {
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
                 int i = y * size + x;
-                int v = Math.max(0, Math.min(255, (lum[i] - lo) * 255 / (hi - lo)));
+                int v = Math.max(0, Math.min(255, (lum[i] - lo) * 255 / (hi - lo) + shade));
                 int t = (BAYER[(y & 3) * 4 + (x & 3)] * 16) + 8;
                 px[i] = v < t ? 0xFF000000 : 0xFFFFFFFF;
             }

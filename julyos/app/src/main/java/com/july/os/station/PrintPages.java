@@ -174,7 +174,7 @@ final class PrintPages {
                     Printer.get().feed();
                 }
             }), St.left(St.lp(-2, 36), 8));
-            page.addView(St.rule(c, St.ink), St.top(new LinearLayout.LayoutParams(-1, 1), 10));
+            page.addView(St.rule(c, St.line), St.top(new LinearLayout.LayoutParams(-1, 1), 10));
             page.addView(strip, St.top(St.lp(-1, -2), 10));
             onQueue();
             return page;
@@ -183,7 +183,7 @@ final class PrintPages {
         private View tile(final Receipt r) {
             Context c = a;
             FrameLayout f = new FrameLayout(c);
-            f.setBackground(St.box(0, St.ink, 1));
+            f.setBackground(St.box(0, St.line, 1));
             LinearLayout in = St.col(c);
             in.setPadding(St.px(12), St.px(12), St.px(12), St.px(12));
             in.addView(new St.Icon(c, icon(r.icon), St.ink), St.lp(22, 22));
@@ -347,7 +347,7 @@ final class PrintPages {
         private static View step(Context c, String label, View.OnClickListener on) {
             TextView t = St.text(c, label, 18, true, 0f, St.ink);
             t.setGravity(Gravity.CENTER);
-            t.setBackground(St.box(0, St.ink, 1));
+            t.setBackground(St.box(0, St.line, 1));
             St.clickable(t, on);
             return t;
         }
@@ -640,7 +640,7 @@ final class PrintPages {
 
         private static View card(Context c, int icon, String title, String text, String btn, boolean filled, View.OnClickListener on) {
             LinearLayout k = St.col(c);
-            k.setBackground(St.box(0, St.ink, 1));
+            k.setBackground(St.box(0, St.line, 1));
             k.setPadding(St.px(22), St.px(22), St.px(22), St.px(22));
             k.addView(new St.Icon(c, icon, St.ink).stroke(1.6f), St.lp(30, 30));
             k.addView(St.space(c), new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -1025,7 +1025,7 @@ final class PrintPages {
 
         private static View stat(Context c, String name, String value) {
             LinearLayout b = St.col(c);
-            b.setBackground(St.box(0, St.ink, 1));
+            b.setBackground(St.box(0, St.line, 1));
             b.setPadding(St.px(14), St.px(14), St.px(14), St.px(14));
             b.addView(St.caps(c, name, 9, false, 0.14f, St.muted));
             b.addView(St.text(c, value, 26, true, 0f, St.ink), St.top(St.lp(-2, -2), 6));
