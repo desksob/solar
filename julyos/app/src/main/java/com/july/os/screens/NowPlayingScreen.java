@@ -159,6 +159,26 @@ public final class NowPlayingScreen extends Screen implements Art.Callback {
                 }
             }));
         }
+        if (com.july.os.system.Printer.get().available()) {
+            if (t != null) {
+                items.add(new Popup.Menu.Item(Icons.LIST, "Print song", new Runnable() {
+                    @Override
+                    public void run() {
+                        com.july.os.system.Printer.get().printTrack(t);
+                        shell.toast(Icons.LIST, "Printing");
+                    }
+                }));
+            }
+            if (p.hasQueue()) {
+                items.add(new Popup.Menu.Item(Icons.LIST, "Print queue", new Runnable() {
+                    @Override
+                    public void run() {
+                        com.july.os.system.Printer.get().printQueue(p.upcoming(), p.position() + 1);
+                        shell.toast(Icons.LIST, "Printing");
+                    }
+                }));
+            }
+        }
         items.add(new Popup.Menu.Item(Icons.PLAY, "Playback options", new Runnable() {
             @Override
             public void run() {

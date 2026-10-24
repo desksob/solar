@@ -119,12 +119,28 @@ public final class Frame {
         d.icon(c, Icons.HOURGLASS, Draw.W - 16f - 14f, t + STRIP / 2f - 7f, 14f, d.bg, 2.2f);
     }
 
+    /** Set by the Shell on the first touch: hints then name gestures instead of Y1 buttons. */
+    public static boolean touch;
+
+    private static String[][] touchHints(String[][] hints) {
+        String[][] out = new String[hints.length][];
+        for (int i = 0; i < hints.length; i++) {
+            String k = hints[i][0];
+            if ("Wheel".equals(k)) k = "Drag";
+            else if ("Center".equals(k)) k = "Tap";
+            else if ("Menu".equals(k)) k = "Top bar";
+            out[i] = new String[]{k, hints[i][1]};
+        }
+        return out;
+    }
+
     /** Hairline + hints spread edge to edge: bold key in ink, action in muted (10px, 0.08em). */
     public void footer(Canvas c, Draw d, String[][] hints) {
         float y = Draw.H - FOOTER;
         d.fill(c, 0, y, Draw.W, Draw.H, d.bg);
         d.fill(c, 0, y, Draw.W, y + 1f, d.hair);
         if (hints == null || hints.length == 0) return;
+        if (touch) hints = touchHints(hints);
         float tr = Draw.em(10f, 0.08f);
         int n = hints.length;
         float[] w = new float[n];

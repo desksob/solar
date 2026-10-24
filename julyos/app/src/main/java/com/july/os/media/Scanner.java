@@ -50,23 +50,9 @@ final class Scanner {
         app = ctx.getApplicationContext();
     }
 
-    /** Storage roots to walk: internal + SD card (deduplicated). */
+    /** Storage roots to walk: internal, SD cards and any USB drive or hard drive (see system.Storage). */
     static List<File> roots() {
-        Set<String> seen = new HashSet<String>();
-        List<File> out = new ArrayList<File>();
-        File[] cands = {Environment.getExternalStorageDirectory(), new File("/storage/sdcard0"),
-                new File("/storage/sdcard1"), new File("/mnt/sdcard"), new File("/mnt/extSdCard")};
-        for (File f : cands) {
-            if (f == null || !f.isDirectory()) continue;
-            String key;
-            try {
-                key = f.getCanonicalPath();
-            } catch (Exception e) {
-                key = f.getAbsolutePath();
-            }
-            if (seen.add(key)) out.add(f);
-        }
-        return out;
+        return com.july.os.system.Storage.roots();
     }
 
     Result scan(Progress progress) {

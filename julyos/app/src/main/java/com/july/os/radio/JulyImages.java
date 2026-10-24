@@ -58,26 +58,7 @@ public final class JulyImages {
         POOL.execute(new Runnable() {
             @Override
             public void run() {
-                Bitmap out = null;
-                long t0 = System.currentTimeMillis();
-                try {
-                    byte[] raw = fetch(fetchUrl(url));
-                    BitmapFactory.Options o = new BitmapFactory.Options();
-                    o.inJustDecodeBounds = true;
-                    BitmapFactory.decodeByteArray(raw, 0, raw.length, o);
-                    int sample = 1;
-                    while (o.outWidth / (sample * 2) >= 320 && o.outHeight / (sample * 2) >= 320) {
-                        sample *= 2;
-                    }
-                    o = new BitmapFactory.Options();
-                    o.inSampleSize = sample;
-                    o.inPreferredConfig = Bitmap.Config.RGB_565;
-                    out = BitmapFactory.decodeByteArray(raw, 0, raw.length, o);
-                    Log.i("JulyImages", "loaded " + url + " in " + (System.currentTimeMillis() - t0) + "ms");
-                } catch (Throwable e) {
-                    Log.e("JulyImages", "load failed " + url, e);
-                }
-                final Bitmap res = out;
+                final Bitmap res = download(url);
                 synchronized (LOADING) {
                     LOADING.remove(url);
                     if (res == null) FAILED.put(url, System.currentTimeMillis());
@@ -97,6 +78,40 @@ public final class JulyImages {
             }
         });
         return null;
+    }
+
+    /** Cached bitmap, or download it here and now (for the printer thread; never on the UI thread). */
+    public static Bitmap load(String url) {
+        if (url == null || url.length() == 0) return null;
+        Bitmap hit = CACHE.get(url);
+        if (hit != null) return hit;
+        Bitmap b = download(url);
+        if (b != null) CACHE.put(url, b);
+        return b;
+    }
+
+    /** Fetch and decode at most ~320 px; null on any failure. */
+    private static Bitmap download(String url) {
+        long t0 = System.currentTimeMillis();
+        try {
+            byte[] raw = fetch(fetchUrl(url));
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(raw, 0, raw.length, o);
+            int sample = 1;
+            while (o.outWidth / (sample * 2) >= 320 && o.outHeight / (sample * 2) >= 320) {
+                sample *= 2;
+            }
+            o = new BitmapFactory.Options();
+            o.inSampleSize = sample;
+            o.inPreferredConfig = Bitmap.Config.RGB_565;
+            Bitmap out = BitmapFactory.decodeByteArray(raw, 0, raw.length, o);
+            Log.i("JulyImages", "loaded " + url + " in " + (System.currentTimeMillis() - t0) + "ms");
+            return out;
+        } catch (Throwable e) {
+            Log.e("JulyImages", "load failed " + url, e);
+            return null;
+        }
     }
 
     /** Show images are full giphy GIFs (10+ MB); the 200px still is ~25 KB and all the screen needs. */

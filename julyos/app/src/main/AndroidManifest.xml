@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Sunmi's printer library says 19; July only binds it where the service exists (not the Y1). -->
+    <uses-sdk tools:overrideLibrary="com.sunmi.library" />
+
+    <queries>
+        <package android:name="woyou.aidlservice.jiuiv5" />
+    </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -24,8 +32,17 @@
         android:hardwareAccelerated="false"
         android:label="July"
         android:largeHeap="true"
+        android:requestLegacyExternalStorage="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".station.StationActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|navigation"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
 
         <activity
             android:name=".ui.Shell"

@@ -26,7 +26,7 @@ public final class MixScreens {
 
     private MixScreens() {}
 
-    public static final File STEMS = new File("/storage/sdcard0/Stems");
+    public static final File STEMS = com.july.os.system.Storage.file("Stems");
     private static final String[] STEM_NAMES = {"Vocals", "Drums", "Bass", "Other"};
 
     // ---- G1 · Mix ----

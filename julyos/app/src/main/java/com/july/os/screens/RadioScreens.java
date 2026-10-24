@@ -116,6 +116,15 @@ public final class RadioScreens {
                     shell.push(new Favs());
                 }
             }));
+            if (com.july.os.system.Printer.get().available()) {
+                r.add(new Row(Icons.LIST, "Print last 10 songs").on(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!shell.online()) { shell.toast(Icons.WIFI, "Needs internet"); return; }
+                        com.july.os.receipts.Receipts.radioHistory(10).start(shell);
+                    }
+                }));
+            }
             r.add(new Row(Icons.SUN, "Radio settings").chevron().on(new Runnable() {
                 @Override
                 public void run() {

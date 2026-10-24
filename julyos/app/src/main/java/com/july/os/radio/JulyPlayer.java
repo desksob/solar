@@ -10,12 +10,18 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 
+import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.Player;
 
 /**
  * July Radio — tiny live-stream player.
  * Layman: plays the July stream and nothing else (no extra recording or buffering, so it stays fast).
- * Technical: one process-wide MediaPlayer; tries https first and falls back to http if the
- * player cannot negotiate TLS on old Android.
+ * Technical: one process-wide MediaPlayer (ExoPlayer on Android 5+, where the platform player
+ * takes ~40 s to buffer the live MP3); tries https first and falls back to http if the player
+ * cannot negotiate TLS on old Android.
  * Reversal: delete this class and use InternetRadioPlayer from the July activity.
  */
 public final class JulyPlayer {
@@ -33,8 +39,10 @@ public final class JulyPlayer {
     private static final String TAG = "JulyPlayer";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final long CONNECT_TIMEOUT_MS = 15000L;
+    private static final boolean EXO = Build.VERSION.SDK_INT >= 21;
 
     private static MediaPlayer player;
+    private static ExoPlayer exo;
     private static volatile int state = IDLE;
     private static Listener listener;
     private static boolean triedHttp;
@@ -100,6 +108,10 @@ public final class JulyPlayer {
     private static void open(final Context app, final String url) {
         setState(CONNECTING);
         startedAt = System.currentTimeMillis();
+        if (EXO) {
+            openExo(app, url);
+            return;
+        }
         try {
             MediaPlayer mp = new MediaPlayer();
             player = mp;
@@ -169,6 +181,52 @@ public final class JulyPlayer {
         }
     }
 
+    /** Android 5+: ExoPlayer reads the live MP3 straight from the server and starts in a second or two. */
+    private static void openExo(final Context app, final String url) {
+        try {
+            final ExoPlayer p = new ExoPlayer.Builder(app).build();
+            exo = p;
+            p.setWakeMode(C.WAKE_MODE_NETWORK);
+            p.addListener(new Player.Listener() {
+                @Override
+                public void onPlaybackStateChanged(int s) {
+                    synchronized (JulyPlayer.class) {
+                        if (exo != p) return;
+                        if (s == Player.STATE_READY && state == CONNECTING) {
+                            Log.i(TAG, "playing after " + (System.currentTimeMillis() - startedAt) + "ms");
+                            playingSince = System.currentTimeMillis();
+                            setState(PLAYING);
+                        } else if (s == Player.STATE_ENDED) {
+                            fail(app, "stream ended", null);
+                        }
+                    }
+                }
+
+                @Override
+                public void onPlayerError(PlaybackException e) {
+                    synchronized (JulyPlayer.class) {
+                        if (exo != p) return;
+                        fail(app, "ExoPlayer error url=" + url, e);
+                    }
+                }
+            });
+            p.setMediaItem(MediaItem.fromUri(url));
+            p.setPlayWhenReady(true);
+            p.prepare();
+            Log.i(TAG, "connecting " + url);
+            MAIN.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (JulyPlayer.class) {
+                        if (exo == p && state == CONNECTING) fail(app, "connect timeout url=" + url, null);
+                    }
+                }
+            }, CONNECT_TIMEOUT_MS);
+        } catch (Exception e) {
+            fail(app, "open failed", e);
+        }
+    }
+
     private static void fail(Context app, String why, Throwable t) {
         Log.e(TAG, why, t);
         if (!triedHttp && JulyRadio.STREAM_URL.startsWith("https://")) {
@@ -182,6 +240,13 @@ public final class JulyPlayer {
     }
 
     private static void releasePlayerOnly() {
+        if (exo != null) {
+            try {
+                exo.release();
+            } catch (Exception ignored) {
+            }
+            exo = null;
+        }
         if (player != null) {
             try {
                 player.reset();

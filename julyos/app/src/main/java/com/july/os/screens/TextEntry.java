@@ -23,6 +23,7 @@ public class TextEntry extends Screen {
     protected final StringBuilder pw = new StringBuilder();
     private int key = 27;  // starts on "k" like the board
     private int shift;     // 0 lower, 1 upper, 2 symbols
+    private float[] keyL = new float[0], keyT = new float[0], keyR = new float[0]; // last drawn caps, for taps
 
     public TextEntry(String title, String right, String label, String initial, boolean secret, Done done) {
         this.title = title;
@@ -60,6 +61,29 @@ public class TextEntry extends Screen {
             k += r.length();
         }
         return null;
+    }
+
+    @Override
+    public boolean onTap(float x, float y) {
+        for (int i = 0; i < keyL.length; i++) {
+            if (x >= keyL[i] && x < keyR[i] && y >= keyT[i] && y < keyT[i] + 26f) {
+                key = i;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onChar(int ch) {
+        if (ch == '\b') {
+            if (pw.length() > 0) pw.setLength(pw.length() - 1);
+        } else if (ch == '\n') {
+            onDone(pw.toString());
+        } else {
+            pw.append((char) ch);
+        }
+        return true;
     }
 
     @Override
@@ -109,12 +133,20 @@ public class TextEntry extends Screen {
         d.fill(c, l + 10f + tw + 2f, y + 9f, l + 10f + tw + 9f, y + 23f, d.ink);
         y += 32f + 6f;
         int idx = 0;
+        if (keyL.length != total()) {
+            keyL = new float[total()];
+            keyT = new float[total()];
+            keyR = new float[total()];
+        }
         for (String row : ROWS) {
             y += 3f;
             float w = row.length() * 30f + (row.length() - 1) * 3f;
             float x = (Draw.W - w) / 2f;
             for (int i = 0; i < row.length(); i++) {
                 keyCap(c, d, x, y, 30f, charAt(idx), idx == key, false);
+                keyL[idx] = x - 1.5f;
+                keyR[idx] = x + 31.5f;
+                keyT[idx] = y - 1.5f;
                 x += 33f;
                 idx++;
             }
@@ -128,6 +160,9 @@ public class TextEntry extends Screen {
         for (int i = 0; i < SPECIAL.length; i++) {
             String label = i == 0 ? new String[]{"Shift", "Caps", "Sym"}[shift] : SPECIAL[i];
             keyCap(c, d, x, y, SPECIAL_W[i], label, idx == key, true);
+            keyL[idx] = x - 1.5f;
+            keyR[idx] = x + SPECIAL_W[i] + 1.5f;
+            keyT[idx] = y - 1.5f;
             x += SPECIAL_W[i] + 3f;
             idx++;
         }

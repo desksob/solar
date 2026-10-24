@@ -284,6 +284,7 @@ public class FormScreen extends Screen {
     protected String title = "", right = "";
     protected float padTop = Frame.PAD_T;
     private float scroll;
+    private float[] partTop = new float[0], partBot = new float[0]; // last drawn spans, for taps
 
     public FormScreen(String title) {
         this.title = title;
@@ -336,8 +337,13 @@ public class FormScreen extends Screen {
         if (selBot - scroll > limit) scroll = selBot - limit;
         if (selTop - scroll < y) scroll = Math.max(0f, selTop - y);
 
+        if (partTop.length != parts.size()) {
+            partTop = new float[parts.size()];
+            partBot = new float[parts.size()];
+        }
+        float clipBot = limit + (pinned.isEmpty() ? Frame.PAD_B : 0f);
         c.save();
-        c.clipRect(0, top, Draw.W, limit + (pinned.isEmpty() ? Frame.PAD_B : 0f));
+        c.clipRect(0, top, Draw.W, clipBot);
         flowY = y - scroll;
         prev = null;
         for (int i = 0; i < parts.size(); i++) {
@@ -345,15 +351,33 @@ public class FormScreen extends Screen {
             if (pinned.contains(p)) continue;
             if (prev != null && prev.boxed() && p.boxed()) flowY -= 1f;
             p.draw(c, d, flowY, i == selected);
+            partTop[i] = Math.max(top, flowY);
+            partBot[i] = Math.min(clipBot, flowY + p.height());
             flowY += p.height();
             prev = p;
         }
         c.restore();
         float py = bottomY - pinnedH + 8f;
         for (Part p : pinned) {
-            p.draw(c, d, py, parts.indexOf(p) == selected);
+            int i = parts.indexOf(p);
+            p.draw(c, d, py, i == selected);
+            partTop[i] = py;
+            partBot[i] = py + p.height();
             py += p.height() + 8f;
         }
+    }
+
+    @Override
+    public boolean onTap(float x, float y) {
+        for (int i = 0; i < parts.size() && i < partTop.length; i++) {
+            if (parts.get(i).selectable() && y >= partTop[i] && y < partBot[i]) {
+                Part cur = selected >= 0 && selected < parts.size() ? parts.get(selected) : null;
+                if (cur instanceof Slider && i != selected) ((Slider) cur).editing = false;
+                selected = i;
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

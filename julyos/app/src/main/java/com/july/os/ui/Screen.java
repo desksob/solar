@@ -64,6 +64,22 @@ public abstract class Screen {
         return false;
     }
 
+    /**
+     * A tap at (x, y) in 480x360 units: select whatever is under it.
+     * @return true to follow with Center (or Center long on a hold); the default treats the whole body as Center.
+     */
+    public boolean onTap(float x, float y) {
+        return true;
+    }
+
+    /**
+     * A character from a full keyboard (USB / Bluetooth on the Sunmi T2): '\b' delete, '\n' enter.
+     * @return true when the screen takes typing; otherwise keys stay Y1 controls.
+     */
+    public boolean onChar(int ch) {
+        return false;
+    }
+
     public void onEnter() {
     }
 

@@ -54,6 +54,7 @@ public final class JulyApp extends Application {
         });
         library.load();
         com.july.os.system.Audio.applyAtStart(this);
+        com.july.os.system.Printer.get().bind(this);
     }
 
     public Library library() { return library; }

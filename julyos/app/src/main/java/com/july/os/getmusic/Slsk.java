@@ -18,7 +18,7 @@ import java.util.List;
  */
 public final class Slsk implements SoulseekClient.Listener {
 
-    public static final File DIR = new File("/storage/sdcard0/Music/Soulseek");
+    public static final File DIR = com.july.os.system.Storage.file("Music/Soulseek");
 
     public interface Listener {
         void onSlsk();

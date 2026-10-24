@@ -32,8 +32,8 @@ public final class GetMusicScreens {
 
     private GetMusicScreens() {}
 
-    static final File YT_MUSIC = new File("/storage/sdcard0/Music/YouTube");
-    static final File YT_VIDEO = new File("/storage/sdcard0/Videos/YouTube");
+    static final File YT_MUSIC = com.july.os.system.Storage.file("Music/YouTube");
+    static final File YT_VIDEO = com.july.os.system.Storage.file("Videos/YouTube");
 
     static String mb(long b) {
         return b <= 0 ? "" : String.format(Locale.US, b >= 1e6 ? "%.0f MB" : "%.1f MB", b / 1e6);
@@ -773,12 +773,12 @@ public final class GetMusicScreens {
         private void download(final Servers.Item it) {
             File dir;
             String ext;
-            if ("Audio".equals(it.type)) { dir = new File("/storage/sdcard0/Music/" + safe(s.name) + "/" + safe(title())); ext = ".mp3"; }
-            else if ("Photo".equals(it.type)) { dir = new File("/storage/sdcard0/Pictures/" + safe(s.name)); ext = ".jpg"; }
+            if ("Audio".equals(it.type)) { dir = com.july.os.system.Storage.file("Music/" + safe(s.name) + "/" + safe(title())); ext = ".mp3"; }
+            else if ("Photo".equals(it.type)) { dir = com.july.os.system.Storage.file("Pictures/" + safe(s.name)); ext = ".jpg"; }
             else if ("MusicAlbum".equals(it.type)) {
                 shell.toast(Icons.INFO, "Open the album to download its songs");
                 return;
-            } else { dir = new File("/storage/sdcard0/Videos/" + safe(s.name)); ext = ".mp4"; }
+            } else { dir = com.july.os.system.Storage.file("Videos/" + safe(s.name)); ext = ".mp4"; }
             String url = "Audio".equals(it.type) ? Servers.audioUrl(s, it) : "Photo".equals(it.type) ? Servers.imageUrl(s, it, 1280)
                     : Servers.videoUrl(s, it);
             Downloads.add(url, new File(dir, safe(it.name) + ext), it.name, new Runnable() {

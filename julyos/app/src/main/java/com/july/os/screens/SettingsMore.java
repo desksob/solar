@@ -308,10 +308,9 @@ public final class SettingsMore {
 
         @Override
         public void onEnter() {
-            for (String r : new String[]{"/storage/sdcard0", "/storage/sdcard1"}) {
+            for (File root : com.july.os.system.Storage.roots()) {
                 try {
-                    if (!new File(r).isDirectory()) continue;
-                    StatFs s = new StatFs(r);
+                    StatFs s = new StatFs(root.getPath());
                     @SuppressWarnings("deprecation")
                     long bs = s.getBlockSize();
                     @SuppressWarnings("deprecation")

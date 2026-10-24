@@ -17,6 +17,8 @@ android {
         def sha = 'unknown'
         try { sha = 'git rev-parse --short HEAD'.execute([], rootDir).text.trim() } catch (ignored) { }
         buildConfigField 'String', 'GIT_SHA', '"' + sha + '"'
+        buildConfigField 'String', 'LASTFM_USER', '"' + (project.findProperty('JULY_LASTFM_USER') ?: '') + '"'
+        buildConfigField 'String', 'LASTFM_API_KEY', '"' + (project.findProperty('JULY_LASTFM_API_KEY') ?: '') + '"'
     }
 
     buildFeatures {
@@ -45,4 +47,10 @@ android {
 dependencies {
     // Modern TLS (1.2/1.3) on Android 4.2, same library Solar shipped.
     implementation 'org.conscrypt:conscrypt-android:2.5.3'
+    // Sunmi built-in thermal printer (T2 and other Sunmi terminals); unused on the Y1.
+    implementation 'com.sunmi:printerlibrary:1.0.24'
+    // July Radio on Android 5+ (Sunmi T2): the platform player takes ~40 s to start the live MP3.
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
+    // July Station draws the design's SVG icons with PathParser (already shipped with ExoPlayer).
+    implementation 'androidx.core:core:1.8.0'
 }

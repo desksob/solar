@@ -22,7 +22,9 @@ import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -38,7 +40,8 @@ import java.util.List;
 
 /**
  * July OS — the one Activity. Owns the screen stack, pop-ups, the frame, device status and the
- * Y1's buttons. Every pixel is drawn by {@link Draw} in the design's 480x360 units.
+ * Y1's buttons (and touch, on panels like the Sunmi T2). Every pixel is drawn by {@link Draw} in
+ * the design's 360-tall units, as wide as the panel's aspect.
  */
 public final class Shell extends Activity implements Player.Listener, Library.Listener {
 
@@ -62,6 +65,19 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     private static final long INTRO_MS = 1100L, BOOT_MIN_MS = 1400L;
 
     private boolean longHandled;
+
+    // touch (Sunmi T2 and other touch panels): taps, wheel-like drags, swipes
+    private static final float DRAG_STEP = 30f, SLOP = 8f, SWIPE = 60f, EDGE = 24f;
+    private static final long LONG_MS = 550L;
+    private float downX, downY, lastStepY;
+    private boolean moved, longFired;
+    private final Runnable longTap = new Runnable() {
+        @Override
+        public void run() {
+            longFired = true;
+            tap(downX, downY, true);
+        }
+    };
     private int lowWarned = 100;
     /** B1b: locked after the screen goes off while something plays; hold Center to unlock. */
     private boolean locked;
@@ -100,6 +116,13 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        // Wide touch panels (Sunmi T2) get July Station unless this launch asked for the classic screens.
+        if ((getIntent() == null || !getIntent().getBooleanExtra("classic", false))
+                && com.july.os.station.Station.wanted(this)) {
+            startActivity(new Intent(this, com.july.os.station.StationActivity.class));
+            finish();
+            return;
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         draw = new Draw(this);
         frame = new Frame(this);
@@ -114,6 +137,11 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             @Override
             protected void onDraw(Canvas c) {
                 paint(c);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent e) {
+                return touch(e);
             }
         };
         getWindow().setFormat(PixelFormat.TRANSLUCENT); // lets the video surface show through
@@ -133,7 +161,50 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         sf.addAction(Intent.ACTION_SCREEN_ON);
         registerReceiver(screen, sf);
+        IntentFilter mf = new IntentFilter(Intent.ACTION_MEDIA_MOUNTED);
+        mf.addAction(Intent.ACTION_MEDIA_UNMOUNTED);
+        mf.addAction(Intent.ACTION_MEDIA_REMOVED);
+        mf.addAction(Intent.ACTION_MEDIA_BAD_REMOVAL);
+        mf.addDataScheme("file");
+        registerReceiver(drives, mf);
+        askForStorage();
     }
+
+    // ---- storage (Android 6+ asks at run time; the Y1's 4.2 grants at install) ----
+
+    private static final int STORAGE_REQUEST = 7;
+
+    private void askForStorage() {
+        if (android.os.Build.VERSION.SDK_INT < 23) return;
+        if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+        requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        if (code != STORAGE_REQUEST) return;
+        if (results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) rescanStorage();
+        else toast(Icons.WARNING, "No storage access: music & files stay empty");
+    }
+
+    private void rescanStorage() {
+        JulyApp.get().library().load();
+        com.july.os.media.Gallery.get().scan(null);
+    }
+
+    /** USB drive / hard drive / SD card plugged in or pulled out: say so and rescan. */
+    private final BroadcastReceiver drives = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent i) {
+            boolean in = Intent.ACTION_MEDIA_MOUNTED.equals(i.getAction());
+            if (!in && !Intent.ACTION_MEDIA_REMOVED.equals(i.getAction())
+                    && !Intent.ACTION_MEDIA_BAD_REMOVAL.equals(i.getAction())
+                    && !Intent.ACTION_MEDIA_UNMOUNTED.equals(i.getAction())) return;
+            toast(Icons.USB, in ? "Drive connected · scanning" : "Drive removed");
+            rescanStorage();
+        }
+    };
 
     @Override
     protected void onNewIntent(Intent i) {
@@ -191,6 +262,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         JulyApp.get().player().removeListener(this);
         JulyApp.get().library().removeListener(this);
         try { unregisterReceiver(screen); } catch (Exception ignored) { }
+        try { unregisterReceiver(drives); } catch (Exception ignored) { }
     }
 
     @Override
@@ -258,6 +330,14 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     public void dismissPopup() {
         popup = null;
         redraw();
+    }
+
+    /** Close {@code p} if it's still the one showing. */
+    public void dismiss(Popup p) {
+        if (popup == p) {
+            popup = null;
+            redraw();
+        }
     }
 
     public void toast(int icon, String text) {
@@ -330,6 +410,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         } else {
             c.drawColor(JulyApp.get().darkTheme() ? 0xFF0A0A0A : 0xFFFFFFFF);
         }
+        Draw.W = Draw.widthFor(c.getWidth(), c.getHeight());
         float s = Math.min(c.getWidth() / Draw.W, c.getHeight() / Draw.H);
         c.save();
         c.translate((c.getWidth() - Draw.W * s) / 2f, (c.getHeight() - Draw.H * s) / 2f);
@@ -375,7 +456,10 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             }
             frame.footer(c, draw, sc.hints());
         }
-        if (popup != null) popup.draw(c, draw);
+        if (popup != null) {
+            popup.draw(c, draw);
+            if (popup.animating()) view.postInvalidateDelayed(33);
+        }
         if (debugKeys) {
             draw.fill(c, 0, 0, Draw.W, 14f, 0xFFFF0000);
             draw.text(c, keyLog, 4f, 11f, draw.med, 10f, 0xFFFFFFFF, 0f);
@@ -517,6 +601,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
     @Override
     public boolean onKeyDown(int code, KeyEvent e) {
         if (booting) return true;
+        if (typed(code, e)) return true;
         if (isCenter(code) || isBack(code)) {
             if (e.getRepeatCount() == 0) {
                 longHandled = false;
@@ -531,6 +616,19 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         Screen.Key k = map(code);
         if (k == null) return super.onKeyDown(code, e);
         dispatch(k);
+        return true;
+    }
+
+    /** A real keyboard (not the Y1's buttons) typing into a screen that takes text. */
+    private boolean typed(int code, KeyEvent e) {
+        InputDevice dev = e.getDevice();
+        if (dev == null || dev.getKeyboardType() != InputDevice.KEYBOARD_TYPE_ALPHABETIC) return false;
+        if (popup != null && popup.modal()) return false;
+        Screen s = top();
+        if (s == null) return false;
+        int ch = code == KeyEvent.KEYCODE_DEL ? '\b' : code == KeyEvent.KEYCODE_ENTER ? '\n' : e.getUnicodeChar();
+        if (ch <= 0 || !s.onChar(ch)) return false;
+        redraw();
         return true;
     }
 
@@ -558,6 +656,84 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
             return true;
         }
         return super.onKeyUp(code, e);
+    }
+
+    /** Panel pixels to the design's 480x360 units (inverse of the scale in {@link #paint}). */
+    private float[] toUnits(float px, float py) {
+        float w = view.getWidth(), h = view.getHeight();
+        Draw.W = Draw.widthFor(w, h);
+        float s = Math.min(w / Draw.W, h / Draw.H);
+        return new float[]{(px - (w - Draw.W * s) / 2f) / s, (py - (h - Draw.H * s) / 2f) / s};
+    }
+
+    /**
+     * Touch maps onto the Y1 controls: tap = Center on what's under the finger, hold = Center long,
+     * vertical drag = wheel, horizontal swipe = Left/Right, swipe in from the left edge or tap the
+     * header = Back, hold the header = Back long (power menu).
+     */
+    private boolean touch(MotionEvent e) {
+        Frame.touch = true;
+        if (booting) return true;
+        float[] u = toUnits(e.getX(), e.getY());
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                downX = u[0];
+                downY = u[1];
+                lastStepY = u[1];
+                moved = false;
+                longFired = false;
+                handler.postDelayed(longTap, LONG_MS);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (longFired) return true;
+                if (!moved && Math.hypot(u[0] - downX, u[1] - downY) > SLOP) {
+                    moved = true;
+                    handler.removeCallbacks(longTap);
+                }
+                // finger up = wheel down, like dragging a list
+                while (u[1] - lastStepY <= -DRAG_STEP) { lastStepY -= DRAG_STEP; dispatch(Screen.Key.DOWN); }
+                while (u[1] - lastStepY >= DRAG_STEP) { lastStepY += DRAG_STEP; dispatch(Screen.Key.UP); }
+                return true;
+            case MotionEvent.ACTION_UP: {
+                handler.removeCallbacks(longTap);
+                if (longFired) return true;
+                float dx = u[0] - downX, dy = u[1] - downY;
+                if (!moved) {
+                    tap(u[0], u[1], false);
+                } else if (Math.abs(dx) > SWIPE && Math.abs(dx) > 2f * Math.abs(dy)) {
+                    if (dx > 0 && downX < EDGE) dispatch(Screen.Key.BACK);
+                    else dispatch(dx > 0 ? Screen.Key.RIGHT : Screen.Key.LEFT);
+                }
+                return true;
+            }
+            case MotionEvent.ACTION_CANCEL:
+                handler.removeCallbacks(longTap);
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    private void tap(float x, float y, boolean hold) {
+        if (locked) {
+            if (hold) dispatch(Screen.Key.CENTER_LONG);
+            return;
+        }
+        if (popup != null && popup.modal()) {
+            Popup p = popup;
+            if (!p.onTap(x, y) && popup == p) popup = null;
+            redraw();
+            return;
+        }
+        if (popup != null) popup = null;
+        Screen s = top();
+        if (s == null) return;
+        if (s.showFrame() && y < Frame.bodyTop()) {
+            dispatch(hold ? Screen.Key.BACK_LONG : Screen.Key.BACK);
+            return;
+        }
+        if (s.onTap(x, y)) dispatch(hold ? Screen.Key.CENTER_LONG : Screen.Key.CENTER);
+        else redraw();
     }
 
     private void dispatch(Screen.Key k) {

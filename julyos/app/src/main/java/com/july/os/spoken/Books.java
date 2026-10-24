@@ -27,7 +27,13 @@ import java.util.Locale;
  */
 public final class Books {
 
-    private static final String[] ROOTS = {"/storage/sdcard0/Audiobooks", "/storage/sdcard1/Audiobooks"};
+    /** An Audiobooks folder on internal storage, an SD card or a USB drive. */
+    private static String[] roots() {
+        List<File> r = com.july.os.system.Storage.roots();
+        String[] out = new String[r.size()];
+        for (int i = 0; i < out.length; i++) out[i] = new File(r.get(i), "Audiobooks").getPath();
+        return out;
+    }
     private static final String[] AUDIO = {".mp3", ".m4a", ".m4b", ".aac", ".ogg", ".flac", ".wav"};
 
     public static final class Chapter {
@@ -128,7 +134,7 @@ public final class Books {
             @Override
             public void run() {
                 List<Book> out = new ArrayList<Book>();
-                for (String r : ROOTS) {
+                for (String r : roots()) {
                     File root = new File(r);
                     File[] kids = root.listFiles();
                     if (kids == null) continue;

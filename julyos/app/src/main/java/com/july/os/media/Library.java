@@ -64,15 +64,31 @@ public final class Library {
     public List<Group> genres() { return genres; }
     public List<Group> playlists() { return playlists; }
 
-    /** (Re)load everything off the UI thread. */
-    public void load() {
+    /** (Re)load everything off the UI thread; a call during a scan runs one more scan after it. */
+    public synchronized void load() {
+        if (loading) {
+            again = true;
+            return;
+        }
+        loading = true;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                loadNow();
+                boolean more;
+                do {
+                    again = false;
+                    loadNow();
+                    synchronized (Library.this) {
+                        more = again;
+                        if (!more) loading = false;
+                    }
+                } while (more);
             }
         }, "july-library").start();
     }
+
+    private boolean loading;
+    private volatile boolean again;
 
     private volatile boolean scanning;
     private volatile int version;

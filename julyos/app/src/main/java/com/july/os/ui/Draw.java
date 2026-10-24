@@ -15,10 +15,17 @@ import java.util.Locale;
 /**
  * The July design's drawing kit: colours, IBM Plex Mono, letter-spaced text, boxes and pills.
  * Every screen draws in the mockups' own 480x360 units; the Shell scales the canvas to the panel.
+ * W widens with the panel's aspect (640 on a 16:9 Sunmi T2) so wide screens fill edge to edge.
  */
 public final class Draw {
 
-    public static final float W = 480f, H = 360f;
+    public static final float H = 360f;
+    public static float W = 480f;
+
+    /** Width in design units for a panel of w x h pixels: the full aspect, never narrower than the Y1's 4:3. */
+    public static float widthFor(float w, float h) {
+        return h > 0f ? Math.max(480f, Math.round(H * w / h)) : 480f;
+    }
 
     // ---- palette (light / dark, straight from the design's renderVals) ----
     public int bg, ink, muted, hair;

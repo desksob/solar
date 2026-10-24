@@ -12,9 +12,19 @@ public abstract class Popup {
 
     public abstract void draw(Canvas c, Draw d);
 
+    /** A tap at (x, y) in 480x360 units. @return true to keep the pop-up open. Default: Center. */
+    public boolean onTap(float x, float y) {
+        return onKey(Screen.Key.CENTER);
+    }
+
     /** Toasts and the volume box close themselves after this many ms (0 = stay). */
     public long autoCloseMs() {
         return 0;
+    }
+
+    /** True while the pop-up needs redrawing every frame (the progress bar's sliding block). */
+    public boolean animating() {
+        return false;
     }
 
     /** Non-modal pop-ups let keys through to the screen underneath. */
@@ -117,6 +127,20 @@ public abstract class Popup {
         }
 
         @Override
+        public boolean onTap(float x, float y) {
+            float w = 300f, l = (Draw.W - w) / 2f;
+            float h = 16f + 18f + 6f + 12f + 14f + 34f + 14f;
+            float t = (Draw.H - h) / 2f;
+            if (x < l || x > l + w || y < t || y > t + h) return false; // outside: cancel
+            float by = t + h - 14f - 34f, bw = (w - 28f - 8f) / 2f;
+            if (y < by || y > by + 34f) return true;
+            if (x >= l + 14f && x < l + 14f + bw) sel = 0;
+            else if (x >= l + 14f + bw + 8f && x < l + 14f + 2f * bw + 8f) sel = 1;
+            else return true;
+            return onKey(Screen.Key.CENTER);
+        }
+
+        @Override
         public void draw(Canvas c, Draw d) {
             scrim(c, d);
             float w = 300f, l = (Draw.W - w) / 2f;
@@ -188,6 +212,20 @@ public abstract class Popup {
         }
 
         @Override
+        public boolean onTap(float x, float y) {
+            float w = 260f, l = (Draw.W - w) / 2f;
+            boolean hasTitle = title != null && title.length() > 0;
+            float h = (hasTitle ? 30f : 0f) + items.size() * (rowH - 1f) + 1f + 4f;
+            float t = (Draw.H - h) / 2f;
+            if (x < l || x > l + w || y < t || y > t + h) return false; // outside: close
+            float y0 = t + 2f + (hasTitle ? 28f : 0f);
+            int i = (int) Math.floor((y - y0) / (rowH - 1f));
+            if (y < y0 || i < 0 || i >= items.size()) return true;
+            sel = i;
+            return onKey(Screen.Key.CENTER);
+        }
+
+        @Override
         public void draw(Canvas c, Draw d) {
             scrim(c, d);
             float w = 260f, l = (Draw.W - w) / 2f;
@@ -217,6 +255,82 @@ public abstract class Popup {
                 y += rowH - 1f;
             }
             d.box(c, l, t, l + w, t + h, d.ink, 2f);
+        }
+    }
+
+    // ---- printing progress (Sunmi printer) ----
+
+    /**
+     * Title, a status line and a bar. {@link #set} from the main thread then redraw; frac < 0 shows a
+     * sliding bar. Back cancels (onCancel) until {@link #lock} for the part that can't be stopped.
+     */
+    public static final class Progress extends Popup {
+        private final String title;
+        private String line = "";
+        private float frac = -1f;
+        private boolean locked;
+        private final Runnable onCancel;
+
+        public Progress(String title, Runnable onCancel) {
+            this.title = title;
+            this.onCancel = onCancel;
+        }
+
+        public void set(String line, float frac) {
+            this.line = line != null ? line : "";
+            this.frac = frac;
+        }
+
+        public void lock() {
+            locked = true;
+        }
+
+        @Override
+        public boolean onKey(Screen.Key k) {
+            if (k == Screen.Key.BACK && !locked) {
+                if (onCancel != null) onCancel.run();
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean onTap(float x, float y) {
+            return true; // taps never dismiss it
+        }
+
+        @Override
+        public void draw(Canvas c, Draw d) {
+            scrim(c, d);
+            float w = 300f, l = (Draw.W - w) / 2f;
+            float h = 16f + 14f + 10f + 10f + 14f + 10f + 16f + (locked ? 0f : 18f);
+            float t = (Draw.H - h) / 2f;
+            d.fill(c, l, t, l + w, t + h, d.bg);
+            d.box(c, l, t, l + w, t + h, d.ink, 2f);
+            float y = t + 16f + 14f;
+            d.centered(c, d.fit(Draw.up(title), w - 32f, d.semi, 14f, 0f), Draw.W / 2f, y, d.semi, 14f, d.ink, 0f);
+            y += 10f + 10f;
+            d.centered(c, d.fit(Draw.up(line), w - 32f, d.med, 10f, 0f), Draw.W / 2f, y, d.med, 10f, d.muted, Draw.em(10f, 0.06f));
+            y += 14f;
+            float bl = l + 16f, br = l + w - 16f;
+            d.box(c, bl, y, br, y + 10f, d.ink);
+            if (frac >= 0f) {
+                d.fill(c, bl + 2f, y + 2f, bl + 2f + (br - bl - 4f) * Math.min(1f, frac), y + 8f, d.ink);
+            } else {
+                // sliding block while there's nothing to count
+                float span = br - bl - 4f, bw = span / 4f;
+                float p = (android.os.SystemClock.uptimeMillis() % 1200L) / 1200f;
+                float x = bl + 2f + (span - bw) * (p < 0.5f ? p * 2f : 2f - p * 2f);
+                d.fill(c, x, y + 2f, x + bw, y + 8f, d.ink);
+            }
+            if (!locked) {
+                d.centered(c, "BACK TO CANCEL", Draw.W / 2f, y + 10f + 18f, d.med, 9f, d.muted, Draw.em(9f, 0.12f));
+            }
+        }
+
+        @Override
+        public boolean animating() {
+            return frac < 0f;
         }
     }
 

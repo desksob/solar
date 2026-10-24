@@ -47,6 +47,9 @@ public final class AppsScreens {
             r.add(open(Icons.PENCIL, "Notes", Notes.class));
             r.add(open(Icons.FOLDER, "File manager", Files.class));
             r.add(open(Icons.RECORDER, "Recorder", Recorder.class));
+            if (com.july.os.system.Printer.get().available()) {
+                r.add(open(Icons.LIST, "Receipts", ReceiptScreens.Menu.class));
+            }
             setRows(r);
         }
 
@@ -232,7 +235,7 @@ public final class AppsScreens {
 
     // ---- Notes ----
 
-    static final File NOTES = new File("/storage/sdcard0/Notes");
+    static final File NOTES = com.july.os.system.Storage.file("Notes");
 
     public static final class Notes extends ListScreen {
         public Notes() {
@@ -374,15 +377,15 @@ public final class AppsScreens {
         public void onShow() {
             List<Row> r = new ArrayList<Row>();
             File[] kids;
+            final java.util.Map<File, String> volumes = com.july.os.system.Storage.volumes();
             if (dir == null) {
-                List<File> roots = new ArrayList<File>();
-                for (String p : new String[]{"/storage/sdcard0", "/storage/sdcard1"}) if (new File(p).isDirectory()) roots.add(new File(p));
-                kids = roots.toArray(new File[0]);
+                kids = volumes.keySet().toArray(new File[0]);
             } else {
                 kids = dir.listFiles();
             }
             if (kids != null) {
-                Arrays.sort(kids, new Comparator<File>() {
+                // drives stay in Storage's order (internal first); folders sort folders-first by name
+                if (dir != null) Arrays.sort(kids, new Comparator<File>() {
                     @Override
                     public int compare(File a, File b) {
                         if (a.isDirectory() != b.isDirectory()) return a.isDirectory() ? -1 : 1;
@@ -391,7 +394,7 @@ public final class AppsScreens {
                 });
                 for (final File f : kids) {
                     if (f.getName().startsWith(".")) continue;
-                    String label = dir == null ? (f.getPath().endsWith("0") ? "Internal storage" : "SD card") : f.getName();
+                    String label = dir == null ? volumes.get(f) : f.getName();
                     String sub;
                     if (f.isDirectory()) {
                         String[] n = f.list();
@@ -399,7 +402,8 @@ public final class AppsScreens {
                     } else {
                         sub = String.format(Locale.US, "%.1f MB", f.length() / 1e6);
                     }
-                    r.add(new Row(0, label).sub(sub).on(new Runnable() {
+                    int icon = dir != null ? 0 : com.july.os.system.Storage.removable(f) ? Icons.USB : Icons.DISC;
+                    r.add(new Row(icon, label).sub(sub).on(new Runnable() {
                         @Override
                         public void run() {
                             openFile(f);
@@ -472,7 +476,7 @@ public final class AppsScreens {
     // ---- Recorder ----
 
     public static final class Recorder extends Screen {
-        static final File DIR = new File("/storage/sdcard0/Recordings");
+        static final File DIR = com.july.os.system.Storage.file("Recordings");
         private MediaRecorder rec;
         private File file;
         private long since;

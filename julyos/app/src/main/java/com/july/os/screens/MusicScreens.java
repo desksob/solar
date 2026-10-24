@@ -1,6 +1,5 @@
 package com.july.os.screens;
 
-import android.os.Environment;
 
 import com.july.os.JulyApp;
 import com.july.os.media.Art;
@@ -101,6 +100,15 @@ public final class MusicScreens {
                         shell.toast(Icons.HEART, on ? "Saved to favourites" : "Removed from favourites");
                     }
                 }));
+        if (com.july.os.system.Printer.get().available()) {
+            items.add(new Popup.Menu.Item(Icons.LIST, "Print", new Runnable() {
+                @Override
+                public void run() {
+                    com.july.os.system.Printer.get().printTrack(t);
+                    shell.toast(Icons.LIST, "Printing");
+                }
+            }));
+        }
         shell.show(new Popup.Menu(t.title, items));
     }
 
@@ -131,7 +139,7 @@ public final class MusicScreens {
             r.add(new Row(Icons.FOLDER, "Folders").chevron().on(new Runnable() {
                 @Override
                 public void run() {
-                    shell.push(new Folders(Environment.getExternalStorageDirectory()));
+                    shell.push(new Folders(null));
                 }
             }));
             r.add(new Row(Icons.PLUS, "Recently added").chevron().on(new Runnable() {
@@ -315,15 +323,30 @@ public final class MusicScreens {
     public static final class Folders extends ListScreen {
         private final File dir;
 
+        /** null = the drives (internal storage, SD cards, USB drives); skipped when there's only one. */
         Folders(File dir) {
-            super(dir.getName().length() > 0 ? dir.getName() : "Folders", LIBRARY, 44f);
-            this.dir = dir;
+            super(dir != null && dir.getName().length() > 0 ? dir.getName() : "Folders", LIBRARY, 44f);
+            java.util.List<File> drives = com.july.os.system.Storage.roots();
+            this.dir = dir == null && drives.size() == 1 ? drives.get(0) : dir;
             emptyTitle = "Empty folder";
         }
 
         @Override
         public void onShow() {
             List<Row> r = new ArrayList<Row>();
+            if (dir == null) {
+                for (final java.util.Map.Entry<File, String> v : com.july.os.system.Storage.volumes().entrySet()) {
+                    boolean usb = com.july.os.system.Storage.removable(v.getKey());
+                    r.add(new Row(usb ? Icons.USB : Icons.DISC, v.getValue()).sub("Drive").on(new Runnable() {
+                        @Override
+                        public void run() {
+                            shell.push(new Folders(v.getKey()));
+                        }
+                    }));
+                }
+                setRows(r);
+                return;
+            }
             File[] kids = dir.listFiles();
             if (kids == null) kids = new File[0];
             List<File> dirs = new ArrayList<File>();

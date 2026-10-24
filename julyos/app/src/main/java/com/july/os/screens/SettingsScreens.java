@@ -76,6 +76,25 @@ public final class SettingsScreens {
                     shell.push(new Theme());
                 }
             }));
+            if (com.july.os.system.Printer.get().available()) {
+                r.add(new Row(Icons.LIST, "Printer").value("Test print").on(new Runnable() {
+                    @Override
+                    public void run() {
+                        com.july.os.system.Printer.get().printTest();
+                        shell.toast(Icons.LIST, "Printing");
+                    }
+                }));
+            }
+            if (com.july.os.station.Station.capable(shell)) {
+                r.add(new Row(Icons.GRID, "July Station").value("Touch screen").chevron().on(new Runnable() {
+                    @Override
+                    public void run() {
+                        JulyApp.get().prefs().edit().putBoolean("station", true).apply();
+                        shell.startActivity(new android.content.Intent(shell, com.july.os.station.StationActivity.class));
+                        shell.finish();
+                    }
+                }));
+            }
             r.add(new Row(Icons.DISC, "Storage").value(freeSpace()).chevron().on(open(SettingsMore.Storage.class)));
             r.add(new Row(Icons.CLOCK, "Date & time").chevron().on(open(SettingsMore.DateTime.class)));
             r.add(new Row(Icons.GLOBE, "Language").value("English").chevron().on(open(SettingsMore.Language.class)));

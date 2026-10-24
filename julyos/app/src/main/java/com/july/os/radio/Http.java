@@ -7,11 +7,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /** Tiny GET helper with short timeouts (the Y1's old TLS stack makes callers fall back to http). */
-final class Http {
+public final class Http {
 
     private Http() {}
 
-    static byte[] get(String url, String accept, String userAgent, int connectSec, int readSec) throws IOException {
+    public static byte[] get(String url, String accept, String userAgent, int connectSec, int readSec) throws IOException {
         HttpURLConnection c = null;
         InputStream in = null;
         try {

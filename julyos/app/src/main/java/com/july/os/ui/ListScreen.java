@@ -59,6 +59,8 @@ public class ListScreen extends Screen {
     protected String emptySub = "";
     protected boolean showCount = true;
     protected boolean nextStrip = false; // menus (Home, Music, Settings) turn it on
+    private float drawnY;  // where the last draw put row `top`, for taps
+    private int drawnEnd;
 
     public ListScreen() {
     }
@@ -128,7 +130,9 @@ public class ListScreen extends Screen {
         if (selected >= top + vis) top = selected - vis + 1;
         top = Math.max(0, Math.min(top, Math.max(0, rows.size() - vis)));
         float y = t + Frame.PAD_T;
-        int end = Math.min(rows.size(), top + vis);
+        drawnY = y;
+        drawnEnd = Math.min(rows.size(), top + vis);
+        int end = drawnEnd;
         for (int i = top; i < end; i++) {
             Row r = rows.get(i);
             if (style == BOXED) drawBoxed(c, d, r, y, i == selected);
@@ -214,6 +218,15 @@ public class ListScreen extends Screen {
 
     /** Hook for lists where a NOW row and a separate selection coexist (queue). */
     protected boolean hasSelectionElsewhere() {
+        return true;
+    }
+
+    @Override
+    public boolean onTap(float x, float y) {
+        if (y < drawnY) return false;
+        int i = top + (int) Math.floor((y - drawnY) / step());
+        if (i < top || i >= drawnEnd) return false;
+        selected = i;
         return true;
     }
 

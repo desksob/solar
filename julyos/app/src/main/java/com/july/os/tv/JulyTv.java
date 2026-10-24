@@ -61,7 +61,7 @@ public final class JulyTv {
     /** Headers for every upstream request (Cloudflare Access service token when configured). */
     public static Map<String, String> headers() {
         Map<String, String> h = new HashMap<String, String>();
-        File f = new File("/storage/sdcard0/July/tv.txt");
+        File f = com.july.os.system.Storage.file("July/tv.txt");
         if (!f.isFile()) return h;
         BufferedReader r = null;
         try {

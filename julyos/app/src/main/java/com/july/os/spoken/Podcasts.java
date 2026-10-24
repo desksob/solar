@@ -33,7 +33,7 @@ import java.util.Locale;
  */
 public final class Podcasts {
 
-    public static final File ROOT = new File("/storage/sdcard0/Podcasts");
+    public static final File ROOT = com.july.os.system.Storage.file("Podcasts");
     private static final File SUBS = new File(ROOT, "subscriptions.txt");
     private static final long NEW_WINDOW = 14L * 24 * 3600 * 1000;
 
