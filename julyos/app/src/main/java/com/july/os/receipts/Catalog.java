@@ -67,7 +67,7 @@ public final class Catalog {
         l.add(new Dedication());
         l.add(new TvSlip());
         l.add(new StudioDoor());
-        l.add(new Soon(STORE, "Store receipt", "Store, phase 6", "store", "Comes with the store"));
+        l.add(com.july.os.store.Store.sampleReceipt());
         l.add(new WifiSlip(c));
         l.add(new Day());
         l.add(new Top(Receipts.CHART));

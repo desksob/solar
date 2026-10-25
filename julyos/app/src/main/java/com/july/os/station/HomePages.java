@@ -148,7 +148,7 @@ final class HomePages {
                     a.push(new WhatsOn());
                 }
             }), St.left(new LinearLayout.LayoutParams(0, -1, 1f), 8));
-            tiles.addView(tile(c, St.STORE, "Store", "Soon", false, "Beta", new View.OnClickListener() {
+            tiles.addView(tile(c, St.STORE, "Store", "Browse", false, "Beta", new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     a.go(a.navPage(NAV_STORE));

@@ -366,9 +366,11 @@ final class StudioPages {
             LinearLayout page = HomePages.padded(c);
             LinearLayout head = St.row(c);
             head.addView(HomePages.big(c, "Templates"), new LinearLayout.LayoutParams(0, -2, 1f));
-            head.addView(St.button(c, "Paper", St.SLIDERS, false, 40, go(new PaperSetup())), St.lp(-2, 40));
-            head.addView(St.button(c, "Frames", St.SCREEN, false, 40, go(new Frames(null))), St.left(St.lp(-2, 40), 8));
-            head.addView(St.button(c, "Images", St.PLUS, false, 40, go(new Images(Studio.PICTURES, null))), St.left(St.lp(-2, 40), 8));
+            LinearLayout tools = St.row(c);
+            tools.addView(St.button(c, "Paper", St.SLIDERS, false, 36, go(new PaperSetup())), St.lp(-2, 36));
+            tools.addView(St.button(c, "Frames", St.SCREEN, false, 36, go(new Frames(null))), St.left(St.lp(-2, 36), 8));
+            tools.addView(St.button(c, "Images", St.PLUS, false, 36, go(new Images(Studio.PICTURES, null))), St.left(St.lp(-2, 36), 8));
+            tools.addView(St.button(c, "Store items", St.STORE, false, 36, go(new StorePages.Items())), St.left(St.lp(-2, 36), 8));
             head.addView(St.button(c, "New from blank", St.PLUS, true, 40, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -378,6 +380,7 @@ final class StudioPages {
                 }
             }), St.left(St.lp(-2, 40), 8));
             page.addView(head);
+            page.addView(tools, St.top(St.lp(-1, -2), 10));
             ScrollView sv = new ScrollView(c);
             LinearLayout body = St.col(c);
             sv.addView(body);
@@ -410,7 +413,7 @@ final class StudioPages {
                     }
                 }));
             }
-            page.addView(sv, St.top(new LinearLayout.LayoutParams(-1, 0, 1f), 18));
+            page.addView(sv, St.top(new LinearLayout.LayoutParams(-1, 0, 1f), 12));
             return page;
         }
 

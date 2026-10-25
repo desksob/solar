@@ -246,7 +246,7 @@ public final class StationActivity extends Activity implements Player.Listener, 
             case Page.NAV_LIBRARY: return new MusicPages.Library();
             case Page.NAV_LASTFM: return new PrintPages.LastPlayed();
             case Page.NAV_PRINT: return new PrintPages.Center();
-            case Page.NAV_STORE: return new MiscPages.Soon(Page.NAV_STORE, "July Store", "The store opens soon. Browsing is open, buying is off.", "Phase 6");
+            case Page.NAV_STORE: return new StorePages.Home();
             case Page.NAV_SETTINGS: return new SystemPages.Settings();
             default: return new HomePages.Home();
         }
