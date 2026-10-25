@@ -325,6 +325,36 @@ public final class Paper {
         return d == 0 ? 30 : d == 2 ? -30 : 0;
     }
 
+    /**
+     * Any picture to 1-bit at w x h (keeps its shape, centre-crops to fit): "dots" ordered dither,
+     * "lines" a horizontal line screen, "threshold" plain black / white. contrast 0-100 (50 = as is).
+     */
+    public static Bitmap render(Bitmap src, int w, int h, String style, int contrast) {
+        float scale = Math.max(w / (float) src.getWidth(), h / (float) src.getHeight());
+        int cw = Math.round(w / scale), ch = Math.round(h / scale);
+        Bitmap crop = Bitmap.createBitmap(src, Math.max(0, (src.getWidth() - cw) / 2), Math.max(0, (src.getHeight() - ch) / 2),
+                Math.min(cw, src.getWidth()), Math.min(ch, src.getHeight()));
+        Bitmap s = Bitmap.createScaledBitmap(crop, w, h, true);
+        int[] px = new int[w * h];
+        s.getPixels(px, 0, w, 0, 0, w, h);
+        int shade = shade();
+        // contrast 0 flattens to 0.4x, 50 leaves it, 100 pushes to 3x (around mid grey)
+        float k = contrast <= 50 ? 0.4f + contrast * 0.012f : 1f + (contrast - 50) * 0.04f;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int i = y * w + x, c = px[i];
+                int l = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
+                int v = Math.max(0, Math.min(255, Math.round((l - 128) * k + 128) + shade));
+                int t;
+                if ("threshold".equals(style)) t = 128;
+                else if ("lines".equals(style)) t = (int) (128 + 110 * Math.sin((y % 6) / 6f * 2 * Math.PI)); // 6-dot line screen
+                else t = BAYER[(y & 3) * 4 + (x & 3)] * 16 + 8;
+                px[i] = v < t ? 0xFF000000 : 0xFFFFFFFF;
+            }
+        }
+        return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888);
+    }
+
     private static final int[] BAYER = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
 
     /**

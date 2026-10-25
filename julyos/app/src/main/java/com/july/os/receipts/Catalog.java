@@ -66,7 +66,7 @@ public final class Catalog {
         l.add(new RequestTicket(null));
         l.add(new Dedication());
         l.add(new TvSlip());
-        l.add(new Soon(EVENTS, "Event lineup", "Studio, phase 5", "calendar", "Comes with Studio"));
+        l.add(new StudioDoor());
         l.add(new Soon(STORE, "Store receipt", "Store, phase 6", "store", "Comes with the store"));
         l.add(new WifiSlip(c));
         l.add(new Day());
@@ -605,6 +605,18 @@ public final class Catalog {
             return start(c, width, "Day summary").center(new SimpleDateFormat("EEE d MMM yyyy", Locale.getDefault()).format(new Date())).rule()
                     .kv("Songs played", String.valueOf(plays)).kv("Prints", String.valueOf(PrintQueue.get(c).printedToday()))
                     .rule().center("Printed " + hm(System.currentTimeMillis())).build();
+        }
+    }
+
+    /** The Events tile: opens Studio (lineups and mixed media). Never drawn itself. */
+    static final class StudioDoor extends Receipt {
+        StudioDoor() {
+            super(EVENTS, "Studio", "Lineups and mixed media", "calendar", true);
+        }
+
+        @Override
+        public Bitmap make(Context c, int width, Progress p) {
+            return null;
         }
     }
 

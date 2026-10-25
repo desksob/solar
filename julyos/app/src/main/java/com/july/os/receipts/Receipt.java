@@ -106,6 +106,11 @@ public abstract class Receipt {
         return line;
     }
 
+    /** Copies Preview starts at (Studio prints use Paper setup's count). */
+    public int defaultCopies() {
+        return 1;
+    }
+
     /** Called once it's queued from Preview (a dedication can add its song to the requests). */
     public void printed(Context c) {
     }

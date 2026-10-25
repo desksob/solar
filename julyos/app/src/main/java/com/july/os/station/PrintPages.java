@@ -112,12 +112,18 @@ final class PrintPages {
             LinearLayout page = HomePages.padded(c);
             LinearLayout head = St.row(c);
             head.addView(HomePages.big(c, "Print center"), new LinearLayout.LayoutParams(0, -2, 1f));
+            head.addView(St.button(c, "Studio", St.LOCK, false, 40, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    a.push(StudioPages.open());
+                }
+            }), St.lp(-2, 40));
             head.addView(St.button(c, "History", St.CLOCK, false, 40, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     a.push(new History());
                 }
-            }), St.lp(-2, 40));
+            }), St.left(St.lp(-2, 40), 10));
             head.addView(St.button(c, "Auto-print", St.REFRESH, false, 40, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -202,6 +208,7 @@ final class PrintPages {
                 @Override
                 public void onClick(View v) {
                     if ("Request ticket".equals(r.name)) a.push(new RequestPages.Queue());
+                    else if ("Studio".equals(r.name)) a.push(StudioPages.open());
                     else if (r.ready) a.preview(r);
                     else a.toast(Catalog.soonReason(r));
                 }
@@ -247,6 +254,7 @@ final class PrintPages {
 
         Preview(Receipt r) {
             this.r = r;
+            copies = r.defaultCopies();
         }
 
         @Override String title() { return "Preview"; }
