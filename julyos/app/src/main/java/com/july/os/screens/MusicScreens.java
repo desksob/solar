@@ -171,7 +171,22 @@ public final class MusicScreens {
                     shell.push(new MixScreens.Menu());
                 }
             }));
+            scanRow = new Row(Icons.RESTART, "Scan library").on(new Runnable() {
+                @Override
+                public void run() {
+                    scanLibrary(shell);
+                }
+            });
+            r.add(scanRow);
             setRows(r);
+        }
+
+        private Row scanRow;
+
+        @Override
+        public void drawBody(android.graphics.Canvas c, com.july.os.ui.Draw d, float t, float b) {
+            if (scanRow != null) scanRow.value(scanLabel());
+            super.drawBody(c, d, t, b);
         }
 
         private Runnable push(final ListScreen s) {
@@ -468,5 +483,25 @@ public final class MusicScreens {
             for (int i = 0; i < list.size(); i++) r.add(songRow(shell, list, i));
             setRows(r);
         }
+    }
+
+    /** "Scanning 1,234" while a scan runs, else the song count. */
+    static String scanLabel() {
+        Library lib = JulyApp.get().library();
+        if (lib.isScanning()) return lib.scannedCount() > 0 ? "Scanning " + lib.scannedCount() : "Scanning";
+        return lib.songs().size() + " songs";
+    }
+
+    /** Look through the cards again for new, changed or removed music. */
+    static void scanLibrary(Shell shell) {
+        Library lib = JulyApp.get().library();
+        if (lib.isScanning()) {
+            shell.toast(Icons.RESTART, "Already scanning");
+            return;
+        }
+        lib.load();
+        com.july.os.media.Gallery.get().scan(null);
+        com.july.os.spoken.Books.scan(null);
+        shell.toast(Icons.RESTART, "Scanning your music");
     }
 }

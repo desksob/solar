@@ -351,6 +351,12 @@ public final class SettingsMore {
             p.add(new Info("Music", music < 0 ? "Counting" : gb(music)));
             p.add(new Info("Video", video < 0 ? "Counting" : gb(video)));
             p.add(new Info("Free", gb(free)));
+            p.add(new Button(Icons.RESTART, "Scan library", 36f, false, new Runnable() {
+                @Override
+                public void run() {
+                    MusicScreens.scanLibrary(shell);
+                }
+            }));
             setParts(p);
         }
 

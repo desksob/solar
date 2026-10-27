@@ -53,6 +53,17 @@ public final class JulyApp extends Application {
             }
         });
         library.load();
+        // Rescan when a card mounts (the internal one mounts late at boot; SD cards come and go).
+        android.content.IntentFilter mf = new android.content.IntentFilter(android.content.Intent.ACTION_MEDIA_MOUNTED);
+        mf.addDataScheme("file");
+        registerReceiver(new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context c, android.content.Intent i) {
+                library.load();
+                com.july.os.media.Gallery.get().scan(null);
+                com.july.os.spoken.Books.scan(null);
+            }
+        }, mf);
         com.july.os.system.Audio.applyAtStart(this);
         com.july.os.system.Printer.get().bind(this);
     }

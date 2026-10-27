@@ -30,6 +30,7 @@ final class Scanner {
     static final class Result {
         final List<Track> tracks = new ArrayList<Track>();
         final Map<String, List<String>> playlists = new HashMap<String, List<String>>(); // name → paths
+        boolean storageEmpty;
     }
 
     interface Progress {
@@ -88,7 +89,10 @@ final class Scanner {
         } finally {
             try { mmr.release(); } catch (Exception ignored) { }
         }
-        writeIndex(out);
+        // An empty walk means the card wasn't readable yet (fuse storage mounts late at boot):
+        // never let that replace a library we already know.
+        if (out.length() > 0 || cache.isEmpty()) writeIndex(out);
+        r.storageEmpty = out.length() == 0;
         for (File pl : lists) {
             List<String> paths = readM3u(pl);
             if (!paths.isEmpty()) {

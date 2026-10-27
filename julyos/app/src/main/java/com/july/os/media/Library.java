@@ -108,9 +108,21 @@ public final class Library {
         return scanned;
     }
 
+    /** The Y1's internal card is fuse storage that mounts after July starts at boot; wait for it. */
+    private static void waitForStorage() {
+        for (int i = 0; i < 90; i++) {
+            boolean mounted = android.os.Environment.MEDIA_MOUNTED.equals(android.os.Environment.getExternalStorageState());
+            String[] kids = new java.io.File("/storage/sdcard0").list();
+            if (mounted && kids != null && kids.length > 0) return;
+            try { Thread.sleep(1000); } catch (InterruptedException e) { return; }
+        }
+    }
+
     private void loadNow() {
         scanning = true;
         scanned = 0;
+        notifyListeners();
+        waitForStorage();
         Scanner.Result res = new Scanner(app).scan(new Scanner.Progress() {
             @Override
             public void onProgress(int n) {
@@ -123,6 +135,12 @@ public final class Library {
                 apply(soFar, false);
             }
         });
+        // Nothing found but we had songs before: the card vanished mid-scan; keep what we had.
+        if (res.storageEmpty && !songs.isEmpty()) {
+            scanning = false;
+            notifyListeners();
+            return;
+        }
         apply(res, true);
     }
 
