@@ -64,6 +64,7 @@ public final class Debug {
         if ("serveradd".equals(name)) return new GetMusicScreens.ServerAdd();
         if ("slsk".equals(name)) return new GetMusicScreens.SlskSignIn();
         if ("ytresults".equals(name)) return new GetMusicScreens.YtResults("july radio");
+        if ("coverflow".equals(name)) return new CoverFlow();
         if ("tv".equals(name)) return new TvScreens.Home();
         if ("tvwatch".equals(name)) return new TvScreens.Watch();
         if ("tvguide".equals(name)) return new TvScreens.Guide();

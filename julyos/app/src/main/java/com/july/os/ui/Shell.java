@@ -96,6 +96,32 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         }
     };
 
+    /** I10: plugging into a computer offers the USB drive; pulling the cable takes the cards back. */
+    private Boolean usbWasConnected;
+    private final BroadcastReceiver usb = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context ctx, Intent i) {
+            final boolean connected = i.getBooleanExtra("connected", false);
+            boolean first = usbWasConnected == null;
+            boolean was = usbWasConnected != null && usbWasConnected;
+            usbWasConnected = connected;
+            if (first || com.july.os.system.UsbDrive.busy()) return;
+            if (connected && !was && !com.july.os.system.UsbDrive.isOn() && !booting) {
+                com.july.os.screens.SettingsMore.UsbConnected.start(Shell.this);
+            } else if (!connected && com.july.os.system.UsbDrive.isOn()) {
+                // Mode switches blip the cable; only a disconnect that lasts is an unplug.
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (usbWasConnected != null && !usbWasConnected && com.july.os.system.UsbDrive.isOn()) {
+                            com.july.os.screens.SettingsMore.UsbConnected.stop(Shell.this);
+                        }
+                    }
+                }, 5000);
+            }
+        }
+    };
+
     private final com.july.os.radio.JulyImages.Callback lockArt = new com.july.os.radio.JulyImages.Callback() {
         @Override
         public void onJulyImage(String url, Bitmap bmp) {
@@ -158,6 +184,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         JulyApp.get().player().addListener(this);
         JulyApp.get().library().addListener(this);
         com.july.os.media.Gallery.get().scan(null); // videos & photos ready before anyone opens them
+        registerReceiver(usb, new IntentFilter("android.hardware.usb.action.USB_STATE"));
         IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         sf.addAction(Intent.ACTION_SCREEN_ON);
         registerReceiver(screen, sf);
@@ -262,6 +289,7 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
         JulyApp.get().player().removeListener(this);
         JulyApp.get().library().removeListener(this);
         try { unregisterReceiver(screen); } catch (Exception ignored) { }
+        try { unregisterReceiver(usb); } catch (Exception ignored) { }
         try { unregisterReceiver(drives); } catch (Exception ignored) { }
     }
 
@@ -562,7 +590,10 @@ public final class Shell extends Activity implements Player.Listener, Library.Li
 
     @Override
     public void onPlayerChanged() {
-        if (JulyApp.get().player().takeError()) push(new com.july.os.screens.ErrorScreen());
+        // A song "fails" when its card goes to the computer; that's not a broken file.
+        if (JulyApp.get().player().takeError() && !com.july.os.system.UsbDrive.isOn() && !com.july.os.system.UsbDrive.busy()) {
+            push(new com.july.os.screens.ErrorScreen());
+        }
         redraw();
     }
 

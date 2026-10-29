@@ -585,17 +585,12 @@ public final class SettingsMore {
         @Override
         public void onShow() {
             List<Row> r = new ArrayList<Row>();
-            r.add(new Row(0, "Charge only").value("Selected"));
-            r.add(new Row(0, "File transfer").on(new Runnable() {
+            boolean drive = com.july.os.system.UsbDrive.isOn();
+            r.add(new Row(0, "Charge only").value(drive ? "" : "Selected"));
+            r.add(new Row(0, "File transfer").value(drive ? "Selected" : "").on(new Runnable() {
                 @Override
                 public void run() {
-                    shell.show(new Popup.Confirm("Share storage?", "Music and photos pause until you disconnect", "Share", new Runnable() {
-                        @Override
-                        public void run() {
-                            if (UsbConnected.share(true)) shell.push(new UsbConnected());
-                            else shell.toast(Icons.WARNING, "Couldn't share storage");
-                        }
-                    }));
+                    UsbConnected.start(shell);
                 }
             }));
             final boolean adb = Settings.Global.getInt(shell.getContentResolver(), Settings.Global.ADB_ENABLED, 0) == 1;
@@ -630,23 +625,48 @@ public final class SettingsMore {
             return new String[][]{{"Menu", "Disconnect"}};
         }
 
-        /** USB mass storage via vold (root): share or take back the cards. */
-        static boolean share(boolean on) {
-            String verb = on ? "share" : "unshare";
-            boolean ok = su("vdc volume " + verb + " /storage/sdcard0 ums");
-            su("vdc volume " + verb + " /storage/sdcard1 ums");
-            return ok;
+        /** Ask, switch the Y1 to a USB drive, then show this screen. */
+        public static void start(final com.july.os.ui.Shell shell) {
+            if (com.july.os.system.UsbDrive.isOn()) {
+                shell.push(new UsbConnected());
+                return;
+            }
+            shell.show(new Popup.Confirm("Use as USB drive?", "Music pauses until you disconnect", "Turn on", new Runnable() {
+                @Override
+                public void run() {
+                    shell.show(new Popup.Loading("Connecting"));
+                    com.july.os.system.UsbDrive.turnOn(new com.july.os.system.UsbDrive.Done() {
+                        @Override
+                        public void onDone(boolean ok) {
+                            shell.dismissPopup();
+                            if (ok) shell.push(new UsbConnected());
+                            else shell.toast(Icons.WARNING, "Plug into a computer first");
+                        }
+                    });
+                }
+            }));
+        }
+
+        /** Give the cards back (also used when the cable is pulled). */
+        public static void stop(final com.july.os.ui.Shell shell) {
+            shell.show(new Popup.Loading("Disconnecting"));
+            com.july.os.system.UsbDrive.turnOff(new com.july.os.system.UsbDrive.Done() {
+                @Override
+                public void onDone(boolean ok) {
+                    shell.dismissPopup();
+                    if (shell.top() instanceof UsbConnected) shell.pop();
+                    shell.toast(Icons.USB, "Storage is back");
+                }
+            });
         }
 
         @Override
         public boolean onKey(Key k) {
             if (k == Key.BACK) {
-                share(false);
-                shell.toast(Icons.USB, "Storage is back");
-                shell.pop();
+                stop(shell);
                 return true;
             }
-            return true;
+            return true; // nothing else works while the cards are on the computer
         }
 
         @Override

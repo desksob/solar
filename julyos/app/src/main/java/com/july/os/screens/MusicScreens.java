@@ -134,6 +134,12 @@ public final class MusicScreens {
             r.add(new Row(Icons.LIST, "Playlists").chevron().on(push(new Groups("Playlists", Groups.PLAYLISTS))));
             r.add(new Row(Icons.PERSON, "Artists").chevron().on(push(new Groups("Artists", Groups.ARTISTS))));
             r.add(new Row(Icons.DISC, "Albums").chevron().on(push(new Groups("Albums", Groups.ALBUMS))));
+            r.add(new Row(Icons.GRID, "Cover Flow").chevron().on(new Runnable() {
+                @Override
+                public void run() {
+                    shell.push(new CoverFlow());
+                }
+            }));
             r.add(new Row(Icons.MUSIC, "Songs").chevron().on(push(new Songs())));
             r.add(new Row(Icons.STAR, "Genres").chevron().on(push(new Groups("Genres", Groups.GENRES))));
             r.add(new Row(Icons.FOLDER, "Folders").chevron().on(new Runnable() {
